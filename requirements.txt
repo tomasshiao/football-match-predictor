@@ -1,0 +1,17 @@
+# Core numerical and data libraries
+numpy
+polars
+scipy
+pymc3
+arviz
+
+# Modeling and evaluation
+scikit-learn
+xgboost
+
+# Visualization
+matplotlib
+seaborn
+
+# Notebook support
+ipykernel
