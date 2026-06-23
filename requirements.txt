@@ -2,8 +2,9 @@
 numpy
 polars
 scipy
-pymc3
+pymc
 arviz
+optuna
 
 # Modeling and evaluation
 scikit-learn
