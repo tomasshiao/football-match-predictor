@@ -2,8 +2,8 @@
 
 **Project:** International fixture score prediction (Dixon-Coles + Bayesian hierarchical + XGBoost ensemble)
 **Reference dataset:** `martj42/international_results` (`results.csv`), filtered to 2018-present
-**Primary demo fixture:** Argentina vs Austria, 2026-06-22 (FIFA World Cup, neutral venue)
-**Stack:** Python 3.12+, Polars, NumPy, SciPy, PyMC, ArviZ, XGBoost, Optuna, Scikit-Learn, Matplotlib, Seaborn
+**Primary demo fixture:** Jordan vs Argentina, 2026-06-27 (FIFA World Cup, neutral venue)
+**Stack:** Python 3.14+, Polars, NumPy, SciPy, PyMC, ArviZ, XGBoost, Optuna, Scikit-Learn, Matplotlib, Seaborn
 
 This document specifies the system before any implementation. It is organized into six parts: Architecture Document, Dependency Graph, Section-by-Section Notebook Plan, Function Inventory, Dataclass Inventory, and Risk Analysis.
 
@@ -16,7 +16,7 @@ This document specifies the system before any implementation. It is organized in
 The system predicts the full scoreline probability distribution for a single international football fixture, not just a 1X2 outcome. It does this by combining three independent estimators of each team's goal-scoring and goal-conceding rates:
 
 | Stage | Method | Role |
-|---|---|---|
+| ----- | ------ | ---- |
 | A | Dixon-Coles (weighted MAP fit via SciPy) | Fast frequentist baseline; source of engineered features; only component with the explicit low-score `tau` correlation correction |
 | B | Bayesian hierarchical Poisson model (PyMC / NUTS) | Same generative structure as A, but fully posterior — gives credible intervals on every team's attack/defense and a posterior-predictive scoreline distribution for the target fixture |
 | C | XGBoost (two Poisson-objective regressors, Optuna-tuned) | Non-parametric correction layer that can pick up nonlinear interactions and recent-form signal that a linear log-rate model cannot |
@@ -24,6 +24,7 @@ The system predicts the full scoreline probability distribution for a single int
 Each stage outputs a full `(K+1) x (K+1)` scoreline probability matrix for a given fixture (`K` = max modeled goals, default 10). The matrices are combined by a weighted ensemble (Section 1.7) into the final prediction, which feeds the three required visualizations (scoreline heatmap, 1X2 bar chart, top-10 scoreline bar chart) and the backtest metrics.
 
 Design goals, in priority order:
+
 1. **No leakage** — every number used to predict a match must have been knowable strictly before that match was played.
 2. **Honest backtesting** — a chronological holdout, not a random split, with metrics reported per model and for the ensemble.
 3. **Reproducibility** — every stochastic component (NUTS, Optuna, XGBoost) takes an explicit seed.
@@ -33,7 +34,7 @@ Design goals, in priority order:
 
 The notebook is implemented as a sequence of cells, but every cell only calls functions defined in one of the following logical modules. Treating the notebook as "thin orchestration over importable modules" keeps cells short and keeps every function independently unit-testable.
 
-```
+```txt
 config.py              Configuration dataclasses and constants (Section 1.3)
 data_ingestion.py       Raw CSV fetch, schema validation, caching
 team_registry.py        FIFA-code <-> dataset team-name resolution, core-team selection
@@ -71,7 +72,7 @@ All of these compose into one top-level `PipelineConfig` dataclass (Section 5) p
 
 ### 1.4 Data Flow Between Sections
 
-```
+```txt
 raw CSV (results.csv)
   -> typed Polars DataFrame                          [data_ingestion]
   -> played / upcoming split                          [data_preparation]
@@ -111,7 +112,7 @@ The split into a **backtest pipeline** (fit on train only, score on test) and a 
 ### 1.5 Model Inputs & Outputs
 
 | Model | Input | Output | Consumed by |
-|---|---|---|---|
+| ----- | ----- | ------ | ----------- |
 | Dixon-Coles | Played matches (team indices, goals, neutral flag, weights) | `DixonColesRatings` (point estimates) | `feature_engineering` (as XGBoost features), `scoring` (its own matrix, using `rho`) |
 | Bayesian hierarchical | Same as Dixon-Coles | `InferenceData`: posterior samples of attack[team], defense[team], home_advantage, intercept | `scoring` (posterior-predictive matrix for the headline fixture; posterior-mean matrix for the backtest, for tractability — see Section 1.6) |
 | XGBoost (x2: home goals, away goals) | Engineered feature row (DC ratings + rolling form + neutral flag) | Two scalar expected-goal predictions (`lambda`, `mu`) per fixture | `scoring` (independent-Poisson matrix; no `tau` term — see Risk Analysis) |
@@ -167,6 +168,7 @@ graph TD
 ```
 
 Textual summary:
+
 - `config.py` has no internal dependencies; everything else may import it.
 - `data_ingestion.py` and `team_registry.py` are independent of each other and both feed `data_preparation.py`.
 - `dixon_coles.py` depends only on `data_preparation.py` output (it does not depend on `feature_engineering.py`; rather, `feature_engineering.py` depends on `dixon_coles.py`'s ratings).
@@ -181,7 +183,7 @@ Textual summary:
 ## 3. Section-by-Section Notebook Plan
 
 | # | Section | Purpose | Key inputs | Key outputs |
-|---|---|---|---|---|
+| - | ------- | ------- | ---------- | ----------- |
 | 0 | Title & methodology overview (markdown) | Frame the problem, summarize the three-model approach and the backtest/production split | — | — |
 | 1 | Configuration | Instantiate every config dataclass into one `PipelineConfig` | — | `PipelineConfig` |
 | 2 | Data ingestion | Fetch and schema-validate `results.csv` | `DataConfig` | raw `pl.DataFrame` |
@@ -210,7 +212,8 @@ Textual summary:
 Signatures only — no implementation. Every function name, parameter types, and return type below is intended to be copy-pasted as the literal `def` line when implementation begins.
 
 ### `config.py`
-```
+
+```python
 def build_default_pipeline_config() -> PipelineConfig
     # Assembles every config dataclass with documented default values.
 
@@ -221,7 +224,8 @@ def get_tournament_weight_table() -> dict[str, float]
 ```
 
 ### `data_ingestion.py`
-```
+
+```python
 def fetch_results_csv(source: str, cache_path: pathlib.Path | None) -> pl.DataFrame
     # Downloads (or reads cached) results.csv, parses date column, returns raw frame.
 
@@ -231,7 +235,8 @@ def validate_schema(df: pl.DataFrame) -> None
 ```
 
 ### `team_registry.py`
-```
+
+```python
 def load_fifa_code_mapping(source: dict[str, str]) -> dict[str, str]
     # Wraps the existing fifa_country_codes.FIFA_TO_DATASET_TEAM mapping.
 
@@ -245,7 +250,8 @@ def filter_to_core_teams(df: pl.DataFrame, core_teams: list[str]) -> pl.DataFram
 ```
 
 ### `data_preparation.py`
-```
+
+```python
 def split_played_and_upcoming(df: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]
 
 def filter_from_date(df: pl.DataFrame, start_date: datetime.date) -> pl.DataFrame
@@ -264,7 +270,8 @@ def compute_match_weights(df: pl.DataFrame, reference_date: datetime.date, confi
 ```
 
 ### `dixon_coles.py`
-```
+
+```python
 def fit_dixon_coles(matches: pl.DataFrame, teams: list[str], config: DixonColesConfig) -> DixonColesRatings
 
 def dixon_coles_tau(home_goals: np.ndarray, away_goals: np.ndarray, lam: np.ndarray, mu: np.ndarray, rho: float) -> np.ndarray
@@ -276,7 +283,8 @@ def negative_log_posterior_gradient(params: np.ndarray, *data_arrays: np.ndarray
 ```
 
 ### `feature_engineering.py`
-```
+
+```python
 def add_rolling_form_features(df: pl.DataFrame, window: int) -> pl.DataFrame
     # Shifts by one match before computing rolling means: leak-free by construction.
 
@@ -292,7 +300,8 @@ def build_fixture_feature_row(fixture: FixtureConfig, ratings: DixonColesRatings
 ```
 
 ### `bayesian_model.py`
-```
+
+```python
 def build_bayesian_model(home_idx: np.ndarray, away_idx: np.ndarray, home_goals: np.ndarray, away_goals: np.ndarray, is_neutral: np.ndarray, weights: np.ndarray, n_teams: int, config: BayesianConfig) -> pm.Model
 
 def fit_bayesian_model(model: pm.Model, config: BayesianConfig) -> az.InferenceData
@@ -315,7 +324,8 @@ def bayesian_rate_means_batch(idata: az.InferenceData, team_index: dict[str, int
 ```
 
 ### `xgboost_model.py`
-```
+
+```python
 def expanding_window_splits(df: pl.DataFrame, n_splits: int, min_train_fraction: float) -> Iterator[tuple[pl.DataFrame, pl.DataFrame]]
 
 def optuna_objective(trial: optuna.Trial, train_features: pl.DataFrame, feature_cols: list[str], weight_col: str, config: OptunaConfig) -> float
@@ -328,7 +338,8 @@ def predict_goal_rates(home_model: xgb.XGBRegressor, away_model: xgb.XGBRegresso
 ```
 
 ### `scoring.py`
-```
+
+```python
 def poisson_score_matrix(lam: float, mu: float, max_goals: int, rho: float) -> np.ndarray
 
 def batch_poisson_score_matrices(lam: np.ndarray, mu: np.ndarray, max_goals: int, rho: float) -> np.ndarray
@@ -343,7 +354,8 @@ def top_n_scorelines(matrix: np.ndarray, n: int) -> list[tuple[tuple[int, int], 
 ```
 
 ### `ensemble.py`
-```
+
+```python
 def compute_ensemble_weights(backtest_metrics: dict[str, ModelMetrics], temperature: float) -> dict[str, float]
 
 def combine_score_matrices(matrices: dict[str, np.ndarray], weights: dict[str, float]) -> np.ndarray
@@ -352,7 +364,8 @@ def prediction_entropy(matrix: np.ndarray) -> float
 ```
 
 ### `evaluation.py`
-```
+
+```python
 def evaluate_predictions(lam: np.ndarray, mu: np.ndarray, actual_home: np.ndarray, actual_away: np.ndarray, rho: float, max_goals: int) -> ModelMetrics
 
 def evaluate_baselines(train_df: pl.DataFrame, test_df: pl.DataFrame) -> dict[str, ModelMetrics]
@@ -361,7 +374,8 @@ def calibration_curve_1x2(predicted_probs: np.ndarray, actual_outcomes: np.ndarr
 ```
 
 ### `visualization.py`
-```
+
+```python
 def plot_score_heatmap(matrix: np.ndarray, home_team: str, away_team: str, max_goals_display: int) -> matplotlib.figure.Figure
 
 def plot_outcome_probabilities(outcome: OutcomeProbabilities, home_team: str, away_team: str) -> matplotlib.figure.Figure
@@ -377,7 +391,7 @@ def plot_backtest_metrics_table(metrics: dict[str, ModelMetrics]) -> matplotlib.
 
 ## 5. Dataclass Inventory
 
-```
+```python
 @dataclass(frozen=True)
 class DataConfig:
     source_url: str
@@ -537,7 +551,7 @@ class FixturePrediction:
 ### 6.1 Leakage Risks
 
 | Risk | Description | Mitigation |
-|---|---|---|
+| ---- | ----------- | ---------- |
 | Random train/test split | Shuffling rows before splitting would let the model train on matches that occur after test matches it's scored on | Chronological split only (`SplitConfig.cutoff_date`); enforced by `train_test_split_by_date` being the only sanctioned split function |
 | Within-train DC look-ahead | Dixon-Coles ratings are fit once on the entire train window, then used as a static feature for every train row, including rows chronologically early in that same window | Documented as an accepted simplification; full mitigation would require refitting DC per-match on a strictly trailing window, which is computationally expensive and out of scope for the default pipeline — flagged explicitly in the Section 19 limitations cell |
 | Rolling form feature leakage | A naive rolling mean that includes the current match's own goals would leak the target into the feature | `add_rolling_form_features` shifts by one match before computing the rolling window; this must be unit-tested with a manual spot check (compare a feature value against a hand-computed value for one team) before trusting it |

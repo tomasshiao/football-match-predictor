@@ -235,4 +235,32 @@ FIFA_TO_DATASET_TEAM: dict[str, str] = {
     "URS": "Soviet Union",
     "YUG": "Yugoslavia",
     "ZAI": "Zaire",
+    
+    # Non-FIFA
+    "BES": "Bonaire",
+    "BOE": "Bonaire",
+    "GUF": "French Guiana",
+    "GLP": "Guadeloupe",
+    "KIR": "Kiribati",
+    "MTQ": "Martinique",
+    "NIU": "Niue",
+    "MNP": "Northern Mariana Islands",
+    "NMI": "Northern Mariana Islands",
+    "REU": "Réunion",
+    "MAF": "Saint Martin",
+    "SMN": "Saint Martin",
+    "SXM": "Sint Maarten",
+    "SMA": "Sint Maarten",
+    "TUV": "Tuvalu",
+    "ZAN": "Zanzibar",
+    
+    # Irregular codes
+    "GBR": "Great Britain",
+    "MHL": "Marshall Islands",
+    "FSM": "Micronesia",
+    "MON": "Monaco",
+    "MCO": "Monaco",
+    "NRU": "Nauru",
+    "PLW": "Palau",
+    "VAT": "Vatican City",
 }
