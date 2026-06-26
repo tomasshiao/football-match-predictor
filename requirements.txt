@@ -13,7 +13,11 @@ xgboost
 # Visualization
 matplotlib
 seaborn
+PyQt6
 
 # Notebook support
 ipykernel
 ipywidgets
+
+# Print
+colorama
