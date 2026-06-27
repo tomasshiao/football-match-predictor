@@ -5,6 +5,7 @@ scipy
 pymc
 arviz
 optuna
+netCDF4
 
 # Modeling and evaluation
 scikit-learn
