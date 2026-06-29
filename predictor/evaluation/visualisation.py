@@ -93,7 +93,7 @@ def plot_score_heatmap(
             text_col  = COLOURS["text"] if cell_norm < 0.55 else COLOURS["bg"]
             weight    = "bold" if val == sub_pct.max() else "normal"
             ax.text(
-                j, i, f"{val:.1f}%",
+                j, i, f"{val:.3f}%",
                 ha="center", va="center",
                 fontsize=8, color=text_col, fontweight=weight,
             )
@@ -107,6 +107,7 @@ def plot_score_heatmap(
                   color=COLOURS["text"], labelpad=8)
     ax.set_ylabel(f"{home_team}  (home goals)", fontsize=10,
                   color=COLOURS["text"], labelpad=8)
+    ax.invert_yaxis()
 
     # ── Colourbar ────────────────────────────────────────────────────────
     cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.015)
@@ -130,8 +131,8 @@ def plot_score_heatmap(
     p_draw = float(np.trace(sub))
     p_away = float(np.triu(sub, k=1).sum())
     outcome_str = (
-        f"  Home win {p_home:.1%}   ·   Draw {p_draw:.1%}"
-        f"   ·   Away win {p_away:.1%}  "
+        f"  Home win {p_home:.3%}   ·   Draw {p_draw:.3%}"
+        f"   ·   Away win {p_away:.3%}  "
     )
     ax.text(
         0.5, -0.09, outcome_str,
@@ -209,13 +210,13 @@ def plot_outcome_probabilities(
             x_ann = prob - 0.015 if prob > 0.12 else prob + 0.008
             ha_ann = "right" if prob > 0.12 else "left"
             col_ann = COLOURS["bg"] if prob > 0.12 else COLOURS["text"]
-            ax.text(x_ann, y, f"{prob:.1%}", ha=ha_ann, va="center",
+            ax.text(x_ann, y, f"{prob:.3%}", ha=ha_ann, va="center",
                     fontsize=11, fontweight="bold", color=col_ann, zorder=4)
 
         # Bracket annotation showing total probability of penalties
         _pen_total = playoff_outcome.p_home_win_penalties + playoff_outcome.p_away_win_penalties
         ax.annotate(
-            f"P(penalties) = {_pen_total:.1%}",
+            f"P(penalties) = {_pen_total:.3%}",
             xy=(max(playoff_outcome.p_home_win_penalties,
                     playoff_outcome.p_away_win_penalties) + 0.01, 1.5),
             fontsize=8, color=COLOURS["text_muted"],
@@ -286,7 +287,7 @@ def plot_outcome_probabilities(
             ha_ann = "right"      if prob > 0.12 else "left"
             col_ann = COLOURS["bg"]    if prob > 0.12 else COLOURS["text"]
             ax.text(
-                x_ann, y, f"{prob:.1%}",
+                x_ann, y, f"{prob:.3%}",
                 ha=ha_ann, va="center",
                 fontsize=11, fontweight="bold", color=col_ann,
                 zorder=4,
@@ -395,7 +396,7 @@ def plot_top_n_scorelines(
         ax.text(
             bar.get_x() + bar.get_width() / 2,
             y_ann,
-            f"{p:.1%}",
+            f"{p:.3%}",
             ha="center", va="bottom",
             fontsize=8.5, fontweight="semibold",
             color=COLOURS["text"],
@@ -439,7 +440,7 @@ def plot_top_n_scorelines(
     )
     ax.text(
         0.5, 1.01,
-        f"Combined probability of displayed scorelines: {cumulative:.1%}",
+        f"Combined probability of displayed scorelines: {cumulative:.3%}",
         ha="center", va="bottom", fontsize=8, color=COLOURS["text_muted"],
         transform=ax.transAxes,
     )
@@ -671,7 +672,7 @@ def plot_backtest_metrics_table(
             if attr == "n_evaluated":
                 row_text.append(f"{int(v):,}")
             elif "accuracy" in attr:
-                row_text.append(f"{v:.1%}")
+                row_text.append(f"{v:.3%}")
             else:
                 row_text.append(f"{v:.4f}")
         cell_text.append(row_text)

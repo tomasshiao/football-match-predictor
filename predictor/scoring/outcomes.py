@@ -23,9 +23,9 @@ class OutcomeProbabilities:
 
     def __str__(self) -> str:
         return (
-            f"Home win: {self.p_home_win:.1%}  |  "
-            f"Draw: {self.p_draw:.1%}  |  "
-            f"Away win: {self.p_away_win:.1%}"
+            f"Home win: {self.p_home_win:.3%}  |  "
+            f"Draw: {self.p_draw:.3%}  |  "
+            f"Away win: {self.p_away_win:.3%}"
         )
 
 @dataclass
@@ -55,10 +55,10 @@ class PlayoffOutcomeProbabilities:
 
     def __str__(self) -> str:
         return (
-            f"Home win: {self.p_home_win:.1%}  |  "
-            f"Home win (pen): {self.p_home_win_penalties:.1%}  |  "
-            f"Away win (pen): {self.p_away_win_penalties:.1%}  |  "
-            f"Away win: {self.p_away_win:.1%}"
+            f"Home win: {self.p_home_win:.3%}  |  "
+            f"Home win (pen): {self.p_home_win_penalties:.3%}  |  "
+            f"Away win (pen): {self.p_away_win_penalties:.3%}  |  "
+            f"Away win: {self.p_away_win:.3%}"
         )
 
 @dataclass
