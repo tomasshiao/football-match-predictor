@@ -1,7 +1,7 @@
 import datetime
 import pathlib
 from dataclasses import dataclass
-from common.tournament_weights import TOURNAMENT_WEIGHTS
+from predictor.common.tournament_weights import TOURNAMENT_WEIGHTS
 
 # --- DataConfig -------------------------------------------
 @dataclass(frozen=True)

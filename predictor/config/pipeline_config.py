@@ -1,8 +1,7 @@
 import datetime
 from dataclasses import dataclass
 import pathlib
-from ..constants.config_constants import _REQUIRED_FEATURE_COLUMNS, _REQUIRED_METRICS, BAYESIAN_SEED, OPTUNA_SEED
-from ..constants.global_constants import SAVE_DIR
+from ..constants.constants import REQUIRED_FEATURE_COLUMNS, REQUIRED_METRICS, BAYESIAN_SEED, OPTUNA_SEED, RESULTS_URL, SAVE_DIR, SHOOTOUT_URL
 from .data_config import DataConfig, TeamFilterConfig, WeightingConfig, SplitConfig, get_tournament_weight_table
 from .model_configs import DixonColesConfig, BayesianConfig, FeatureConfig, OptunaConfig, XGBoostConfig, EnsembleConfig
 
@@ -58,7 +57,7 @@ class EvaluationConfig:
 
     def __post_init__(self) -> None:
         assert self.max_goals >= 5, "max_goals must be at least 5"
-        _missing = set(_REQUIRED_METRICS) - set(self.metrics)
+        _missing = set(REQUIRED_METRICS) - set(self.metrics)
         assert not _missing, (
             f"EvaluationConfig.metrics is missing required entries: {_missing}"
         )
@@ -129,7 +128,13 @@ class PipelineConfig:
     paths: PathConfig
 
 
-def build_default_pipeline_config() -> PipelineConfig:
+def build_default_pipeline_config(
+        home_team_fifa_code: str,
+        away_team_fifa_code: str,
+        match_date: datetime.date,
+        is_neutral_venue: bool,
+        is_playoff: bool = False
+    ) -> PipelineConfig:
     """Construct the default PipelineConfig with documented defaults.
 
     All tunable values are set here.  No magic numbers appear anywhere
@@ -143,14 +148,8 @@ def build_default_pipeline_config() -> PipelineConfig:
     return PipelineConfig(
         prod_ref_date=datetime.date.today(),
         data=DataConfig(
-            source_url=(
-                "https://raw.githubusercontent.com/martj42/"
-                "international_results/master/results.csv"
-            ),
-            shootout_url=(
-                "https://raw.githubusercontent.com/martj42/"
-                "international_results/master/shootouts.csv"
-            ),
+            source_url=RESULTS_URL,
+            shootout_url=SHOOTOUT_URL,
             cache_path=pathlib.Path(f"{SAVE_DIR}/data/results_cache.csv"),
             start_date=datetime.date(2018, 1, 1),
         ),
@@ -181,7 +180,7 @@ def build_default_pipeline_config() -> PipelineConfig:
         ),
         features=FeatureConfig(
             rolling_window=10,
-            feature_columns=list(_REQUIRED_FEATURE_COLUMNS),
+            feature_columns=list(REQUIRED_FEATURE_COLUMNS),
         ),
         optuna=OptunaConfig(
             n_trials=60,
@@ -209,15 +208,15 @@ def build_default_pipeline_config() -> PipelineConfig:
         ),
         ensemble=EnsembleConfig(temperature=1.0),
         fixture=FixtureConfig(
-            home_team_fifa_code=HOME_TEAM_FIFA_CODE,
-            away_team_fifa_code=AWAY_TEAM_FIFA_CODE,
-            match_date=MATCH_DATE,
-            is_neutral_venue=IS_NEUTRAL_VENUE,
-            is_playoff=IS_PLAYOFF
+            home_team_fifa_code=home_team_fifa_code,
+            away_team_fifa_code=away_team_fifa_code,
+            match_date=match_date,
+            is_neutral_venue=is_neutral_venue,
+            is_playoff=is_playoff
         ),
         evaluation=EvaluationConfig(
             max_goals=13,
-            metrics=list(_REQUIRED_METRICS),
+            metrics=list(REQUIRED_METRICS),
         ),
         paths=PathConfig(
             root_dir=SAVE_DIR,

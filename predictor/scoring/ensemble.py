@@ -12,7 +12,7 @@ def compute_ensemble_weights(
     Uses a softmax over negative log-loss to convert each model's test-set
     performance into a weight:
 
-        weight_m = exp(−loss_m / T) / Σ_m' exp(−loss_m' / T)
+        weight_m = exp(-loss_m / T) / Σ_m' exp(-loss_m' / T)
 
     where T = ``temperature``.  Lower T concentrates weight on the
     best-performing model; higher T blends all three more uniformly.

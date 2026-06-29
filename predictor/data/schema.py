@@ -2,26 +2,15 @@ import datetime
 import warnings
 import polars as pl
 
-from ..constants.global_constants import CFG
-
-# Expected schema: column name -> Polars dtype
-EXPECTED_COLUMNS: dict[str, type[pl.DataType]] = {
-    "date":       pl.Date,
-    "home_team":  pl.Utf8,
-    "away_team":  pl.Utf8,
-    "home_score": pl.Int64,
-    "away_score": pl.Int64,
-    "tournament": pl.Utf8,
-    "city":       pl.Utf8,
-    "country":    pl.Utf8,
-    "neutral":    pl.Boolean,
-}
+from predictor.config.pipeline_config import PipelineConfig
+from ..constants.constants import EXPECTED_COLUMNS
 
 def validate_schema(
     df: pl.DataFrame,
     expected: dict[str, type[pl.DataType]] | None = None,
     start_date: datetime.date | None = None,
-    stale_days: int = 7
+    stale_days: int = 7,
+    pipeline_config: PipelineConfig | None = None
 ) -> None:
     """Assert that the DataFrame matches the expected schema.
 
@@ -42,6 +31,8 @@ def validate_schema(
     Raises:
         ValueError: If any expected columns are missing or have wrong dtypes.
     """
+    assert pipeline_config is not None, "pipeline_config must be provided for date checks"
+    
     if expected is None:
         expected = EXPECTED_COLUMNS
 
@@ -73,7 +64,7 @@ def validate_schema(
 
     # 3. Staleness warning
     max_date: datetime.date = df["date"].max()
-    today = CFG.prod_ref_date
+    today = pipeline_config.prod_ref_date
     delta_days = (today - max_date).days
     if delta_days > stale_days:
         warnings.warn(

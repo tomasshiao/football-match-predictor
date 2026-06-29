@@ -3,7 +3,7 @@ import numpy as np
 import polars as pl
 from sklearn.metrics import log_loss as sk_log_loss
 
-from predictor.constants.global_constants import CFG
+from predictor.config.pipeline_config import PipelineConfig
 from predictor.scoring.matrix import batch_poisson_score_matrices
 
 @dataclass
@@ -162,6 +162,7 @@ def evaluate_predictions(
 def evaluate_baselines(
     train_df: pl.DataFrame,
     test_df:  pl.DataFrame,
+    pipeline_config: PipelineConfig,
 ) -> dict[str, ModelMetrics]:
     """Compute metrics for two trivial baselines, required to be beaten by all models.
 
@@ -185,6 +186,8 @@ def evaluate_baselines(
         ``dict`` keyed ``'Home-bias baseline'`` and ``'Mean-goals baseline'``,
         each mapping to a ``ModelMetrics`` instance.
     """
+    assert pipeline_config is not None, "pipeline_config must be provided for evaluation"
+    
     n_test = test_df.height
     act_h  = test_df["home_score"].to_numpy().astype(np.float64)
     act_a  = test_df["away_score"].to_numpy().astype(np.float64)
@@ -206,7 +209,7 @@ def evaluate_baselines(
     _bias_lam = np.full(n_test, mean_lam)
     _bias_mu  = np.full(n_test, mean_mu)
     _bias_mats = batch_poisson_score_matrices(
-        _bias_lam, _bias_mu, CFG.evaluation.max_goals, rho=0.0
+        _bias_lam, _bias_mu, pipeline_config.evaluation.max_goals, rho=0.0
     )
     # Override the 1X2 probs to use the training-set proportions directly,
     # which is more accurate than the Poisson matrix collapse for this baseline.
@@ -221,7 +224,7 @@ def evaluate_baselines(
     _mean_lam_arr = np.full(n_test, mean_lam)
     _mean_mu_arr  = np.full(n_test, mean_mu)
     _mean_mats    = batch_poisson_score_matrices(
-        _mean_lam_arr, _mean_mu_arr, CFG.evaluation.max_goals, rho=0.0
+        _mean_lam_arr, _mean_mu_arr, pipeline_config.evaluation.max_goals, rho=0.0
     )
     _mean_metrics = evaluate_predictions(
         _mean_mats, act_h.astype(int), act_a.astype(int),

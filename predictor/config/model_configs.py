@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from ..constants.config_constants import _REQUIRED_FEATURE_COLUMNS
+from ..constants.constants import REQUIRED_FEATURE_COLUMNS
 
 # --- DixonColesConfig --------------------------------
 @dataclass(frozen=True)
@@ -94,7 +94,7 @@ class FeatureConfig:
 
     def __post_init__(self) -> None:
         assert self.rolling_window >= 3, "rolling_window must be at least 3"
-        _missing = set(_REQUIRED_FEATURE_COLUMNS) - set(self.feature_columns)
+        _missing = set(REQUIRED_FEATURE_COLUMNS) - set(self.feature_columns)
         assert not _missing, (
             f"FeatureConfig.feature_columns is missing required features: {_missing}"
         )

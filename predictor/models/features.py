@@ -1,6 +1,7 @@
 import polars as pl
 
 from predictor.config.pipeline_config import PipelineConfig
+from predictor.constants.constants import SEP
 from predictor.models.dixon_coles import DixonColesRatings
 
 def _validate_feature_inputs(
@@ -590,7 +591,7 @@ def run_feature_engineering(
 
     # ── Summary banner ──────────────────────────────────────────────────────
     print("Section 7 — Feature Engineering")
-    print("─" * 60)
+    print(SEP)
     print(f"  FORM_DF:        {form_df.height:,} rows")
     print(f"  FEATURE_DF:     {feature_df.height:,} rows")
     print(f"  TRAIN_FEATURES: {train_features.height:,} rows")

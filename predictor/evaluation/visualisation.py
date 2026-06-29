@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import polars as pl
 
-from predictor.constants.global_constants import _C, CFG
+from predictor.config.pipeline_config import PipelineConfig
+from predictor.constants.constants import COLOURS
 from predictor.evaluation.metrics import ModelMetrics
 from predictor.scoring.outcomes import OutcomeProbabilities, PlayoffOutcomeProbabilities, top_n_scorelines
 
@@ -46,12 +47,12 @@ def plot_score_heatmap(
     # ── Colour map: dark background → electric blue (home-team colour) ────
     cmap = mcolors.LinearSegmentedColormap.from_list(
         "pitch_heat",
-        [_C["bg"], "#0d3a6e", _C["home"]],
+        [COLOURS["bg"], "#0d3a6e", COLOURS["home"]],
     )
 
     fig, ax = plt.subplots(figsize=(10, 8), constrained_layout=True)
-    fig.patch.set_facecolor(_C["bg"])
-    ax.set_facecolor(_C["bg"])
+    fig.patch.set_facecolor(COLOURS["bg"])
+    ax.set_facecolor(COLOURS["bg"])
 
     im = ax.imshow(
         sub_pct,
@@ -66,7 +67,7 @@ def plot_score_heatmap(
     # ── Grid lines between cells ─────────────────────────────────────────
     ax.set_xticks(np.arange(-0.5, k, 1), minor=True)
     ax.set_yticks(np.arange(-0.5, k, 1), minor=True)
-    ax.grid(which="minor", color=_C["border"], linewidth=0.8, alpha=0.8)
+    ax.grid(which="minor", color=COLOURS["border"], linewidth=0.8, alpha=0.8)
     ax.tick_params(which="minor", bottom=False, left=False)
 
     # ── Diagonal draw borders ────────────────────────────────────────────
@@ -75,7 +76,7 @@ def plot_score_heatmap(
             (d - 0.48, d - 0.48), 0.96, 0.96,
             boxstyle="square,pad=0",
             linewidth=1.6,
-            edgecolor=_C["accent"],
+            edgecolor=COLOURS["accent"],
             facecolor="none",
             zorder=3,
         ))
@@ -89,7 +90,7 @@ def plot_score_heatmap(
                 continue
             # Choose annotation text colour based on cell luminance
             cell_norm = sub[i, j] / max(sub.max(), 1e-9)
-            text_col  = _C["text"] if cell_norm < 0.55 else _C["bg"]
+            text_col  = COLOURS["text"] if cell_norm < 0.55 else COLOURS["bg"]
             weight    = "bold" if val == sub_pct.max() else "normal"
             ax.text(
                 j, i, f"{val:.1f}%",
@@ -100,19 +101,19 @@ def plot_score_heatmap(
     # ── Axes ─────────────────────────────────────────────────────────────
     ax.set_xticks(range(k))
     ax.set_yticks(range(k))
-    ax.set_xticklabels(range(k), fontsize=9, color=_C["text"])
-    ax.set_yticklabels(range(k), fontsize=9, color=_C["text"])
+    ax.set_xticklabels(range(k), fontsize=9, color=COLOURS["text"])
+    ax.set_yticklabels(range(k), fontsize=9, color=COLOURS["text"])
     ax.set_xlabel(f"{away_team}  (away goals)", fontsize=10,
-                  color=_C["text"], labelpad=8)
+                  color=COLOURS["text"], labelpad=8)
     ax.set_ylabel(f"{home_team}  (home goals)", fontsize=10,
-                  color=_C["text"], labelpad=8)
+                  color=COLOURS["text"], labelpad=8)
 
     # ── Colourbar ────────────────────────────────────────────────────────
     cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.015)
-    cbar.set_label("Probability (%)", fontsize=9, color=_C["text"], labelpad=8)
-    cbar.ax.yaxis.set_tick_params(color=_C["text_muted"], labelsize=8)
-    plt.setp(cbar.ax.yaxis.get_ticklabels(), color=_C["text_muted"])
-    cbar.outline.set_edgecolor(_C["border"])
+    cbar.set_label("Probability (%)", fontsize=9, color=COLOURS["text"], labelpad=8)
+    cbar.ax.yaxis.set_tick_params(color=COLOURS["text_muted"], labelsize=8)
+    plt.setp(cbar.ax.yaxis.get_ticklabels(), color=COLOURS["text_muted"])
+    cbar.outline.set_edgecolor(COLOURS["border"])
 
     # ── Title ────────────────────────────────────────────────────────────
     title_parts = [f"{home_team}  vs  {away_team}"]
@@ -120,7 +121,7 @@ def plot_score_heatmap(
         title_parts.append(title_suffix)
     ax.set_title(
         "  ·  ".join(title_parts),
-        fontsize=12, fontweight="bold", color=_C["text"], pad=12,
+        fontsize=12, fontweight="bold", color=COLOURS["text"], pad=12,
     )
 
     # ── Outcome probability strips on the margins ─────────────────────────
@@ -135,12 +136,12 @@ def plot_score_heatmap(
     ax.text(
         0.5, -0.09, outcome_str,
         ha="center", va="top", fontsize=8.5,
-        color=_C["text_muted"], transform=ax.transAxes,
+        color=COLOURS["text_muted"], transform=ax.transAxes,
     )
 
     # ── Draw border legend ────────────────────────────────────────────────
     _draw_patch = mpatches.Patch(
-        facecolor="none", edgecolor=_C["accent"], linewidth=1.5,
+        facecolor="none", edgecolor=COLOURS["accent"], linewidth=1.5,
         label="Draw (diagonal)",
     )
     ax.legend(
@@ -157,7 +158,7 @@ def plot_score_heatmap(
         ]
         fig.text(
             0.01, 0.02, "Ensemble weights\n" + "\n".join(weight_lines),
-            fontsize=7.5, color=_C["text_muted"], va="bottom",
+            fontsize=7.5, color=COLOURS["text_muted"], va="bottom",
         )
 
     return fig
@@ -189,14 +190,14 @@ def plot_outcome_probabilities(
     if playoff_outcome is not None:
         # ── Playoff: four-bar layout ───────────────────────────────────
         fig, ax = plt.subplots(figsize=(10, 6), constrained_layout=True)
-        fig.patch.set_facecolor(_C["bg"])
-        ax.set_facecolor(_C["surface"])
+        fig.patch.set_facecolor(COLOURS["bg"])
+        ax.set_facecolor(COLOURS["surface"])
 
         outcomes_4 = [
-            (f"{home_team} win (90 min)",   playoff_outcome.p_home_win,           _C["home"]),
-            (f"{home_team} win (penalties)", playoff_outcome.p_home_win_penalties, _C["home_pens"]),  # lighter blue
-            (f"{away_team} win (penalties)", playoff_outcome.p_away_win_penalties, _C["away_pens"]),  # lighter coral
-            (f"{away_team} win (90 min)",   playoff_outcome.p_away_win,           _C["away"]),
+            (f"{home_team} win (90 min)",   playoff_outcome.p_home_win,           COLOURS["home"]),
+            (f"{home_team} win (penalties)", playoff_outcome.p_home_win_penalties, COLOURS["home_pens"]),  # lighter blue
+            (f"{away_team} win (penalties)", playoff_outcome.p_away_win_penalties, COLOURS["away_pens"]),  # lighter coral
+            (f"{away_team} win (90 min)",   playoff_outcome.p_away_win,           COLOURS["away"]),
         ]
 
         bar_height  = 0.52
@@ -207,7 +208,7 @@ def plot_outcome_probabilities(
                     linewidth=0, zorder=3)
             x_ann = prob - 0.015 if prob > 0.12 else prob + 0.008
             ha_ann = "right" if prob > 0.12 else "left"
-            col_ann = _C["bg"] if prob > 0.12 else _C["text"]
+            col_ann = COLOURS["bg"] if prob > 0.12 else COLOURS["text"]
             ax.text(x_ann, y, f"{prob:.1%}", ha=ha_ann, va="center",
                     fontsize=11, fontweight="bold", color=col_ann, zorder=4)
 
@@ -217,35 +218,35 @@ def plot_outcome_probabilities(
             f"P(penalties) = {_pen_total:.1%}",
             xy=(max(playoff_outcome.p_home_win_penalties,
                     playoff_outcome.p_away_win_penalties) + 0.01, 1.5),
-            fontsize=8, color=_C["text_muted"],
+            fontsize=8, color=COLOURS["text_muted"],
         )
 
         ax.set_yticks(y_positions)
         ax.set_yticklabels([lbl for lbl, _, _ in outcomes_4],
-                           fontsize=10, color=_C["text"])
+                           fontsize=10, color=COLOURS["text"])
         ax.set_xlim(0, 1.0)
         ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=0))
-        ax.set_xlabel("Probability", fontsize=9, color=_C["text_muted"], labelpad=6)
+        ax.set_xlabel("Probability", fontsize=9, color=COLOURS["text_muted"], labelpad=6)
         ax.invert_yaxis()
         ax.spines["left"].set_visible(False)
         ax.tick_params(left=False)
-        ax.grid(axis="x", color=_C["border"], linewidth=0.5, alpha=0.5)
+        ax.grid(axis="x", color=COLOURS["border"], linewidth=0.5, alpha=0.5)
         ax.grid(axis="y", visible=False)
         ax.set_title(
             f"{home_team}  vs  {away_team}  —  Playoff Outcome Probabilities",
-            fontsize=11.5, fontweight="bold", color=_C["text"], pad=10,
+            fontsize=11.5, fontweight="bold", color=COLOURS["text"], pad=10,
         )
         return fig
 
     else:
         fig, ax = plt.subplots(figsize=(10, 5), constrained_layout=True)
-        fig.patch.set_facecolor(_C["bg"])
-        ax.set_facecolor(_C["surface"])
+        fig.patch.set_facecolor(COLOURS["bg"])
+        ax.set_facecolor(COLOURS["surface"])
 
         outcomes = [
-            (f"{home_team} win", outcome.p_home_win, _C["home"]),
-            ("Draw",             outcome.p_draw,     _C["draw"]),
-            (f"{away_team} win", outcome.p_away_win, _C["away"]),
+            (f"{home_team} win", outcome.p_home_win, COLOURS["home"]),
+            ("Draw",             outcome.p_draw,     COLOURS["draw"]),
+            (f"{away_team} win", outcome.p_away_win, COLOURS["away"]),
         ]
 
         bar_height  = 0.52
@@ -256,7 +257,7 @@ def plot_outcome_probabilities(
             model_names  = list(per_model_outcomes.keys())
             n_models     = len(model_names)
             sub_h        = bar_height / (n_models + 1)
-            model_colours = [_C["home"], _C["away"], _C["accent"]]
+            model_colours = [COLOURS["home"], COLOURS["away"], COLOURS["accent"]]
 
             for m_idx, (m_name, m_oc) in enumerate(per_model_outcomes.items()):
                 m_vals = [m_oc.p_home_win, m_oc.p_draw, m_oc.p_away_win]
@@ -283,7 +284,7 @@ def plot_outcome_probabilities(
             # Probability annotation inside or outside bar
             x_ann = prob - 0.015 if prob > 0.12 else prob + 0.008
             ha_ann = "right"      if prob > 0.12 else "left"
-            col_ann = _C["bg"]    if prob > 0.12 else _C["text"]
+            col_ann = COLOURS["bg"]    if prob > 0.12 else COLOURS["text"]
             ax.text(
                 x_ann, y, f"{prob:.1%}",
                 ha=ha_ann, va="center",
@@ -292,32 +293,32 @@ def plot_outcome_probabilities(
             )
 
         # ── Reference line at 33.3 % (uniform baseline) ──────────────────────
-        ax.axvline(1 / 3, color=_C["border"], linewidth=1.0,
+        ax.axvline(1 / 3, color=COLOURS["border"], linewidth=1.0,
                 linestyle="--", alpha=0.7, zorder=1)
         ax.text(
             1 / 3 + 0.005, -0.55,
             "Equal chance\n(33.3%)",
-            fontsize=7.5, color=_C["text_muted"], va="bottom",
+            fontsize=7.5, color=COLOURS["text_muted"], va="bottom",
         )
 
         # ── Axes ─────────────────────────────────────────────────────────────
         ax.set_yticks(y_positions)
         ax.set_yticklabels(
             [label for label, _, _ in outcomes],
-            fontsize=10.5, color=_C["text"],
+            fontsize=10.5, color=COLOURS["text"],
         )
         ax.set_xlim(0, 1.0)
         ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=0))
-        ax.set_xlabel("Probability", fontsize=9, color=_C["text_muted"], labelpad=6)
+        ax.set_xlabel("Probability", fontsize=9, color=COLOURS["text_muted"], labelpad=6)
         ax.invert_yaxis()
         ax.spines["left"].set_visible(False)
         ax.tick_params(left=False)
-        ax.grid(axis="x", color=_C["border"], linewidth=0.5, alpha=0.5)
+        ax.grid(axis="x", color=COLOURS["border"], linewidth=0.5, alpha=0.5)
         ax.grid(axis="y", visible=False)
 
         ax.set_title(
             f"{home_team}  vs  {away_team}  —  1X2 Outcome Probabilities",
-            fontsize=11.5, fontweight="bold", color=_C["text"], pad=10,
+            fontsize=11.5, fontweight="bold", color=COLOURS["text"], pad=10,
         )
 
         if per_model_outcomes:
@@ -334,6 +335,7 @@ def plot_top_n_scorelines(
     home_team: str,
     away_team: str,
     n: int = 10,
+    pipeline_config: PipelineConfig | None = None,
 ) -> matplotlib.figure.Figure:
     """Render the top-N most probable exact scorelines as a bar chart.
 
@@ -355,26 +357,28 @@ def plot_top_n_scorelines(
     Returns:
         matplotlib.figure.Figure
     """
+    assert pipeline_config is not None, "pipeline_config must be provided for evaluation"
+    
     scorelines = top_n_scorelines(matrix, n)
 
     labels = []
     probs  = []
     colors = []
     for (h, a), p in scorelines:
-        labels.append(f"{CFG.fixture.home_team_fifa_code} {h}-{a} {CFG.fixture.away_team_fifa_code}")
+        labels.append(f"{pipeline_config.fixture.home_team_fifa_code} {h}-{a} {pipeline_config.fixture.away_team_fifa_code}")
         probs.append(p)
         if h > a:
-            colors.append(_C["home"])
+            colors.append(COLOURS["home"])
         elif h == a:
-            colors.append(_C["draw"])
+            colors.append(COLOURS["draw"])
         else:
-            colors.append(_C["away"])
+            colors.append(COLOURS["away"])
 
     cumulative = sum(probs)
 
     fig, ax = plt.subplots(figsize=(11, 5.5), constrained_layout=True)
-    fig.patch.set_facecolor(_C["bg"])
-    ax.set_facecolor(_C["surface"])
+    fig.patch.set_facecolor(COLOURS["bg"])
+    ax.set_facecolor(COLOURS["surface"])
 
     x = np.arange(len(labels))
     bars = ax.bar(
@@ -394,19 +398,19 @@ def plot_top_n_scorelines(
             f"{p:.1%}",
             ha="center", va="bottom",
             fontsize=8.5, fontweight="semibold",
-            color=_C["text"],
+            color=COLOURS["text"],
         )
 
     # ── Axes ─────────────────────────────────────────────────────────────
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9.5, color=_C["text"])
+    ax.set_xticklabels(labels, fontsize=9.5, color=COLOURS["text"])
     ax.set_xlim(-0.55, len(labels) - 0.45)
     ax.set_ylim(0, max_p * 1.22)
     ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=1))
-    ax.set_ylabel("Probability", fontsize=9, color=_C["text_muted"], labelpad=6)
-    ax.grid(axis="y", color=_C["border"], linewidth=0.5, alpha=0.5)
+    ax.set_ylabel("Probability", fontsize=9, color=COLOURS["text_muted"], labelpad=6)
+    ax.grid(axis="y", color=COLOURS["border"], linewidth=0.5, alpha=0.5)
     ax.grid(axis="x", visible=False)
-    ax.spines["bottom"].set_color(_C["border"])
+    ax.spines["bottom"].set_color(COLOURS["border"])
 
     # ── Rank labels ───────────────────────────────────────────────────────
     for i, bar in enumerate(bars, 1):
@@ -415,15 +419,15 @@ def plot_top_n_scorelines(
             -max_p * 0.07,
             f"#{i}",
             ha="center", va="top",
-            fontsize=7, color=_C["text_muted"],
+            fontsize=7, color=COLOURS["text_muted"],
             transform=ax.transData,
         )
 
     # ── Legend ───────────────────────────────────────────────────────────
     legend_handles = [
-        mpatches.Patch(color=_C["home"], label=f"{home_team} win"),
-        mpatches.Patch(color=_C["draw"], label="Draw"),
-        mpatches.Patch(color=_C["away"], label=f"{away_team} win"),
+        mpatches.Patch(color=COLOURS["home"], label=f"{home_team} win"),
+        mpatches.Patch(color=COLOURS["draw"], label="Draw"),
+        mpatches.Patch(color=COLOURS["away"], label=f"{away_team} win"),
     ]
     ax.legend(handles=legend_handles, loc="upper right",
               fontsize=8.5, framealpha=0.8)
@@ -431,12 +435,12 @@ def plot_top_n_scorelines(
     # ── Title and subtitle ────────────────────────────────────────────────
     ax.set_title(
         f"{home_team}  vs  {away_team}  —  Top {n} Most Probable Scorelines",
-        fontsize=11.5, fontweight="bold", color=_C["text"], pad=10,
+        fontsize=11.5, fontweight="bold", color=COLOURS["text"], pad=10,
     )
     ax.text(
         0.5, 1.01,
         f"Combined probability of displayed scorelines: {cumulative:.1%}",
-        ha="center", va="bottom", fontsize=8, color=_C["text_muted"],
+        ha="center", va="bottom", fontsize=8, color=COLOURS["text_muted"],
         transform=ax.transAxes,
     )
 
@@ -467,9 +471,9 @@ def plot_calibration_curve(
         "away_win": "Away Win",
     }
     outcome_colors  = {
-        "home_win": _C["home"],
-        "draw":     _C["draw"],
-        "away_win": _C["away"],
+        "home_win": COLOURS["home"],
+        "draw":     COLOURS["draw"],
+        "away_win": COLOURS["away"],
     }
 
     model_names   = list(curves.keys())
@@ -477,23 +481,23 @@ def plot_calibration_curve(
     model_ls      = ["-", "--", ":"]
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5), constrained_layout=True)
-    fig.patch.set_facecolor(_C["bg"])
+    fig.patch.set_facecolor(COLOURS["bg"])
     fig.suptitle(
         "1X2 Calibration Curves — Predicted vs Observed Probability",
-        fontsize=12, fontweight="bold", color=_C["text"],
+        fontsize=12, fontweight="bold", color=COLOURS["text"],
     )
 
     for ax, outcome in zip(axes, outcome_labels):
-        ax.set_facecolor(_C["surface"])
+        ax.set_facecolor(COLOURS["surface"])
 
         # Perfect calibration diagonal
         ax.plot(
             [0, 1], [0, 1],
-            color=_C["border"], linewidth=1.2,
+            color=COLOURS["border"], linewidth=1.2,
             linestyle="--", label="Perfect calibration",
         )
         ax.fill_between(
-            [0, 1], [0, 1], color=_C["border"], alpha=0.06,
+            [0, 1], [0, 1], color=COLOURS["border"], alpha=0.06,
         )
 
         for (model_name, marker, ls) in zip(model_names, model_markers, model_ls):
@@ -525,19 +529,19 @@ def plot_calibration_curve(
         ax.set_aspect("equal")
         ax.set_title(
             outcome_display[outcome],
-            fontsize=10, fontweight="semibold", color=_C["text"], pad=7,
+            fontsize=10, fontweight="semibold", color=COLOURS["text"], pad=7,
         )
         ax.set_xlabel("Predicted Probability", fontsize=8.5,
-                      color=_C["text_muted"])
+                      color=COLOURS["text_muted"])
         ax.set_ylabel("Observed Frequency", fontsize=8.5,
-                      color=_C["text_muted"])
+                      color=COLOURS["text_muted"])
         ax.xaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=0))
         ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1, decimals=0))
-        ax.tick_params(colors=_C["text_muted"])
+        ax.tick_params(colors=COLOURS["text_muted"])
         for sp in ax.spines.values():
-            sp.set_edgecolor(_C["border"])
+            sp.set_edgecolor(COLOURS["border"])
         ax.legend(fontsize=7.5, framealpha=0.7, loc="upper left")
-        ax.grid(color=_C["border"], linewidth=0.4, alpha=0.5)
+        ax.grid(color=COLOURS["border"], linewidth=0.4, alpha=0.5)
 
     return fig
 
@@ -600,13 +604,13 @@ def plot_backtest_metrics_table(
         figsize=(13, max(3.5, len(row_names) * 0.72 + 1.8)),
         constrained_layout=True,
     )
-    fig.patch.set_facecolor(_C["bg"])
-    ax.set_facecolor(_C["bg"])
+    fig.patch.set_facecolor(COLOURS["bg"])
+    ax.set_facecolor(COLOURS["bg"])
     ax.axis("off")
 
     ax.set_title(
         "Backtest Evaluation Metrics",
-        fontsize=12, fontweight="bold", color=_C["text"],
+        fontsize=12, fontweight="bold", color=COLOURS["text"],
         pad=14, loc="left",
     )
 
@@ -622,7 +626,7 @@ def plot_backtest_metrics_table(
             rng = mx - mn
 
             if rng < 1e-9 or col_names[c_idx] == "N Evaluated":
-                cell_bg = _C["surface"]
+                cell_bg = COLOURS["surface"]
             else:
                 # Normalise to [0, 1]; 0 = best, 1 = worst
                 norm = (v - mn) / rng
@@ -634,7 +638,7 @@ def plot_backtest_metrics_table(
                     cell_bg = mcolors.to_hex(
                         _blend(
                             mcolors.to_rgb("#1a4d2e"),   # deep green
-                            mcolors.to_rgb(_C["surface"]),
+                            mcolors.to_rgb(COLOURS["surface"]),
                             t,
                         )
                     )
@@ -642,7 +646,7 @@ def plot_backtest_metrics_table(
                     t = (norm - 0.5) * 2
                     cell_bg = mcolors.to_hex(
                         _blend(
-                            mcolors.to_rgb(_C["surface"]),
+                            mcolors.to_rgb(COLOURS["surface"]),
                             mcolors.to_rgb("#5a1a1a"),   # deep red
                             t,
                         )
@@ -687,10 +691,10 @@ def plot_backtest_metrics_table(
         colLabels=col_names,
         cellColours=cell_colours,
         rowColours=[
-            _C["border"] if r not in real_model_names else _C["surface"]
+            COLOURS["border"] if r not in real_model_names else COLOURS["surface"]
             for r in row_names
         ],
-        colColours=[_C["home"]] * len(col_names),
+        colColours=[COLOURS["home"]] * len(col_names),
         loc="center",
         cellLoc="center",
     )
@@ -700,23 +704,23 @@ def plot_backtest_metrics_table(
 
     # Style header and row label cells
     for (row, col), cell in tbl.get_celld().items():
-        cell.set_edgecolor(_C["border"])
+        cell.set_edgecolor(COLOURS["border"])
         cell.set_linewidth(0.5)
         if row == 0:                         # column headers
-            cell.set_text_props(color=_C["bg"], fontweight="bold", fontsize=8)
+            cell.set_text_props(color=COLOURS["bg"], fontweight="bold", fontsize=8)
         elif col == -1:                       # row labels
             cell.set_text_props(
-                color=_C["text"], fontsize=8.5,
+                color=COLOURS["text"], fontsize=8.5,
                 style="italic" if row_names[row - 1] not in real_model_names
                                 else "normal",
             )
         else:
-            cell.set_text_props(color=_C["text"], fontsize=8.5)
+            cell.set_text_props(color=COLOURS["text"], fontsize=8.5)
 
     # ── Legend annotations ────────────────────────────────────────────────
     _green_patch = mpatches.Patch(color="#1a4d2e", label="Best in column")
     _red_patch   = mpatches.Patch(color="#5a1a1a", label="Worst in column")
-    _base_patch  = mpatches.Patch(color=_C["border"], label="Baseline row")
+    _base_patch  = mpatches.Patch(color=COLOURS["border"], label="Baseline row")
     ax.legend(
         handles=[_green_patch, _red_patch, _base_patch],
         loc="upper right", fontsize=7.5, framealpha=0.8,
