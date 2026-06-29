@@ -22,3 +22,7 @@ ipywidgets
 
 # Print
 colorama
+
+# FastAPI
+fastapi
+pydantic
