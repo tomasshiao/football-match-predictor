@@ -1,0 +1,135 @@
+[build-system]
+requires = ["setuptools>=75.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "football-score-predictor"
+version = "0.1.0"
+description = "International football score prediction via Dixon-Coles, Bayesian hierarchical Poisson, and XGBoost ensemble"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+
+dependencies = [
+    # ── Numerics / data ──────────────────────────────────────────────────────
+    "numpy>=2.0",
+    "polars>=1.0",
+    "scipy>=1.14",
+
+    # ── Bayesian ─────────────────────────────────────────────────────────────
+    # PyMC 5 depends on PyTensor ≥ 2.20; both require a C compiler at runtime
+    # for graph compilation.  PyMC ≥ 5.10 is the first release that officially
+    # supports Python 3.12+; pin the lower bound conservatively and let pip
+    # resolve the correct PyTensor / Pytensor-base transitive pin.
+    "pymc>=5.10",
+    "arviz>=0.19",
+    "netCDF4>=1.7",           # required by arviz for .nc InferenceData I/O
+
+    # ── Machine learning ─────────────────────────────────────────────────────
+    "scikit-learn>=1.5",
+    "xgboost>=2.1",
+    "optuna>=3.6",
+    "joblib>=1.4",            # used directly for XGBoost model serialisation
+
+    # ── Visualisation ────────────────────────────────────────────────────────
+    "matplotlib>=3.9",
+    "seaborn>=0.13",          # notebook visualisation layer
+
+    # ── FastAPI service ───────────────────────────────────────────────────────
+    "fastapi>=0.115",
+    "pydantic>=2.7",
+    "uvicorn[standard]>=0.30",
+
+    # ── Notebook / terminal ───────────────────────────────────────────────────
+    "colorama>=0.4.6",
+]
+
+[project.optional-dependencies]
+notebook = [
+    "ipykernel>=6.29",
+    "ipywidgets>=8.1",
+    "PyQt6>=6.7",             # interactive Matplotlib backend (QtAgg)
+]
+
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+# Start the FastAPI service with a single CLI entry point.
+football-predictor = "uvicorn:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["predictor*"]
+
+# ── Ruff (linter + formatter) ─────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "ANN", # flake8-annotations
+    "D",   # pydocstyle (Google convention enforced below)
+]
+ignore = [
+    "D100",    # missing docstring in public module (covered by file-level docstrings)
+    "D104",    # missing docstring in public package
+    "D203",    # one-blank-line-before-class (conflicts with D211)
+    "D213",    # multi-line-summary-second-line (conflicts with D212)
+]
+
+# Tests and notebooks are exempt from annotation and docstring requirements.
+# Must be an inline table: glob keys containing * and / are not valid TOML
+# bare keys and cannot appear as [tool.ruff.lint.per-file-ignores] subtable headers.
+per-file-ignores = {"tests/**" = ["ANN", "D"], "notebooks/**" = ["ANN", "D", "E402"]}
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# ── Mypy (static type checker) ────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+# PyMC and ArviZ ship incomplete stubs; ignore missing imports for those.
+[[tool.mypy.overrides]]
+module = [
+    "pymc.*",
+    "arviz.*",
+    "xgboost.*",
+    "optuna.*",
+    "scipy.*",
+    "sklearn.*",
+    "seaborn.*",
+    "colorama.*",
+    "netCDF4.*",
+]
+ignore_missing_imports = true
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "-v",
+]
+markers = [
+    "unit: fast, in-process unit tests",
+    "integration: end-to-end pipeline tests (slower)",
+]
