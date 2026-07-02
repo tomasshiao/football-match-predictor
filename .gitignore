@@ -2,6 +2,10 @@ __pycache__/*
 **/__pycache__/**
 .ipynb_checkpoints/*
 .venv/*
+figures/*
+models/*
+cache/*
+
 *.csv
 *.joblib
 *.nc
