@@ -17,6 +17,7 @@ POST /backtest
 
 from __future__ import annotations
 
+import base64
 import datetime
 import io
 import logging
@@ -28,6 +29,7 @@ import numpy as np
 import arviz as az
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from predictor import (
@@ -73,6 +75,11 @@ from predictor import (
     # Evaluation
     evaluate_predictions,
     evaluate_baselines,
+    # Visualisation
+    plot_score_heatmap,
+    plot_outcome_probabilities,
+    plot_top_n_scorelines,
+    plot_backtest_metrics_table,
     # Outcomes
     FixturePrediction,
     OutcomeProbabilities,
@@ -88,6 +95,32 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 _REAL_MODEL_NAMES: list[str] = ["Dixon-Coles", "Bayesian", "XGBoost"]
+
+
+def _fig_to_base64_png(fig: Any) -> str:
+    """Encode a matplotlib Figure as a base64 PNG data URL and close it.
+
+    Closing the figure is not optional here: matplotlib keeps every created
+    Figure alive (referenced by pyplot's global state) until it's explicitly
+    closed. This is a long-running server process handling many requests,
+    not a notebook cell run once — skipping the close() call leaks memory,
+    one prediction at a time.
+
+    Args:
+        fig: A matplotlib.figure.Figure returned by one of the
+            predictor.evaluation.visualisation plotting functions.
+
+    Returns:
+        A ``data:image/png;base64,...`` string suitable for an <img src>.
+    """
+    import matplotlib.pyplot as plt
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
 
 app = FastAPI(
     title="Football Score Predictor",
@@ -133,6 +166,33 @@ class BacktestRequest(BaseModel):
     match_date: datetime.date
     is_neutral_venue: bool = False
     is_playoff: bool = False
+
+
+# ---------------------------------------------------------------------------
+# GET /teams
+# ---------------------------------------------------------------------------
+
+@app.get("/teams")
+def list_teams() -> JSONResponse:
+    """Return every known FIFA code / team name pair for client-side pickers.
+
+    This is the full static mapping, not the "core teams" subset that
+    /predict actually validates against (core teams are computed per
+    request from the current training window's match-count threshold, so
+    there's no static list to return here without re-running part of the
+    pipeline just to populate a dropdown). Picking a team with too little
+    history to model will surface as a normal /predict error, which the
+    frontend already has to handle regardless.
+
+    Returns:
+        JSON list of ``{"code": "ARG", "name": "Argentina"}`` objects,
+        sorted by name.
+    """
+    teams = [
+        {"code": code, "name": name}
+        for code, name in sorted(FIFA_TO_DATASET_TEAM.items(), key=lambda kv: kv[1])
+    ]
+    return JSONResponse(content=teams)
 
 
 # ---------------------------------------------------------------------------
@@ -625,6 +685,47 @@ def predict(request: PredictRequest) -> JSONResponse:
         LOGGER.exception("Pipeline error in /predict")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    # Render charts server-side. A failure here shouldn't hide a
+    # successful prediction, so charts are best-effort: log and continue
+    # with whichever ones succeeded rather than turning a good prediction
+    # into a 500 because a plot failed.
+    charts: dict[str, str] = {}
+    try:
+        charts["score_heatmap"] = _fig_to_base64_png(
+            plot_score_heatmap(
+                matrix          = prediction.ensemble_matrix,
+                home_team       = prediction.home_team,
+                away_team       = prediction.away_team,
+                title_suffix    = "(Ensemble)",
+                model_weights   = prediction.ensemble_weights,
+            )
+        )
+        charts["outcome_probabilities"] = _fig_to_base64_png(
+            plot_outcome_probabilities(
+                outcome          = prediction.outcome,
+                home_team        = prediction.home_team,
+                away_team        = prediction.away_team,
+                ensemble_weights = prediction.ensemble_weights,
+                playoff_outcome  = prediction.playoff_outcome,
+            )
+        )
+        charts["top_scorelines"] = _fig_to_base64_png(
+            plot_top_n_scorelines(
+                matrix    = prediction.ensemble_matrix,
+                home_team = prediction.home_team,
+                away_team = prediction.away_team,
+                n         = 10,
+            )
+        )
+        charts["backtest_metrics_table"] = _fig_to_base64_png(
+            plot_backtest_metrics_table(
+                metrics          = backtest_metrics,
+                real_model_names = _REAL_MODEL_NAMES,
+            )
+        )
+    except Exception:
+        LOGGER.exception("Chart generation failed in /predict; returning data without it")
+
     payload: dict[str, Any] = {
         "home_team":        prediction.home_team,
         "away_team":        prediction.away_team,
@@ -643,6 +744,7 @@ def predict(request: PredictRequest) -> JSONResponse:
         "backtest_metrics": {
             name: _metrics_to_dict(m) for name, m in backtest_metrics.items()
         },
+        "charts": charts,
     }
     return JSONResponse(content=payload)
 
@@ -727,3 +829,12 @@ def serve() -> None:
 
 if __name__ == "__main__":
     serve()
+
+
+# ---------------------------------------------------------------------------
+# Static frontend
+# ---------------------------------------------------------------------------
+# Mounted last and at the root path: StaticFiles(html=True) serves index.html
+# for "/" and any unmatched path, so it must come after every API route
+# above or it would shadow them.
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

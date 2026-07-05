@@ -4,15 +4,6 @@
 # Compiles all C-extension wheels (PyMC / PyTensor, XGBoost, netCDF4, …) in
 # an isolated layer so the final image contains only the installed packages,
 # not the build toolchain.
-#
-# Base image is pinned to the "-bookworm" suffix, not just "python:3.12-slim".
-# The unsuffixed "slim" tag floats to whatever Debian release is currently
-# "stable" and moved from bookworm to trixie, which renamed the versioned
-# runtime packages below (libhdf5-103 -> libhdf5-310, libnetcdf19 ->
-# libnetcdf22) and broke this build. Pinning the Debian release stops that
-# drift; bump it deliberately (and update the package names in the runtime
-# stage to match) when you're ready to move to a newer Debian release rather
-# than having it happen silently on a routine rebuild.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM python:3.12-slim-bookworm AS builder
 
@@ -85,6 +76,7 @@ WORKDIR /app
 # so that Docker can reuse cache layers for the stable parts of the codebase.
 COPY predictor/ ./predictor/
 COPY main.py .
+COPY static/ ./static/
 
 # Data directory: intentionally NOT copied in (see line below) — the app
 # fetches results.csv / shootouts.csv over HTTPS on first run instead of
@@ -115,6 +107,19 @@ USER predictor
 # default $HOME/.pytensor) so a read-only root filesystem can be used if
 # required. Writable because of the chown above.
 ENV PYTENSOR_FLAGS="base_compiledir=/app/.pytensor_cache"
+
+# Force the non-interactive rendering backend. /predict now generates real
+# chart images (score heatmap, outcome bars, etc.) on every request via
+# predictor.evaluation.visualisation — without this, matplotlib may try to
+# find a display in a headless container and fail or silently misbehave.
+ENV MPLBACKEND=Agg
+
+# The `predictor` user has no home directory (adduser --system defaults to
+# /nonexistent), so matplotlib's default config-dir lookup fails and it
+# falls back to a fresh /tmp directory on every restart — harmless, but
+# noisy, and wasteful now that charts are a real per-request feature rather
+# than an unused import. Writable because of the chown above.
+ENV MPLCONFIGDIR=/app/.cache/matplotlib
 
 # Suppress PyMC progress bars in a container log stream (tqdm writes ANSI).
 ENV PYMC_PROGRESS_DISABLE=1

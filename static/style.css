@@ -1,0 +1,410 @@
+/* ---------------------------------------------------------------------
+   Design tokens
+   Palette: a floodlit pitch at night, not a spreadsheet. Deep pitch-green
+   background, chalk-white text, floodlight-gold accent reserved for the
+   one signature element (the VS badge) and the submit button.
+   Type: Oswald (condensed, scoreboard/kit-numeral feel) for display,
+   Inter for UI text, IBM Plex Mono for anything numeric/statistical.
+--------------------------------------------------------------------- */
+:root {
+  --bg:          #0b1f17;
+  --surface:     #12291f;
+  --surface-2:   #1a3a2a;
+  --line:        #274536;
+  --text:        #edf3ec;
+  --text-muted:  #8fa396;
+  --accent:      #e8b94a;
+  --accent-ink:  #241a04;
+  --away:        #e0784f;
+
+  --font-display: "Oswald", sans-serif;
+  --font-body:    "Inter", sans-serif;
+  --font-mono:    "IBM Plex Mono", monospace;
+
+  --radius: 10px;
+  --shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
+}
+
+* { box-sizing: border-box; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100%;
+}
+
+body {
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Faint centre-circle + halfway-line watermark, purely decorative */
+.pitch-lines {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(232, 185, 74, 0.07), transparent 45%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.015) 0px,
+      rgba(255, 255, 255, 0.015) 1px,
+      transparent 1px,
+      transparent 64px
+    );
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 56px 20px 96px;
+}
+
+/* ----------------------------- Masthead ----------------------------- */
+.masthead {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 14px;
+}
+
+.masthead h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.1rem, 5vw, 3rem);
+  letter-spacing: 0.01em;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.subhead {
+  color: var(--text-muted);
+  font-size: 15px;
+  max-width: 46ch;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* ----------------------------- Match card ---------------------------- */
+.matchcard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+}
+
+.teams-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+.team-field label,
+.field label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.vs-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+  box-shadow: 0 0 0 4px var(--bg), 0 0 0 5px var(--line);
+  margin-top: 22px;
+}
+
+/* Tom Select theme overrides — dark surface to match the card */
+.ts-wrapper.single .ts-control,
+.ts-dropdown {
+  background: var(--surface-2) !important;
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+  font-family: var(--font-body) !important;
+  font-size: 15px !important;
+}
+
+.ts-wrapper .ts-control input {
+  color: var(--text) !important;
+}
+
+.ts-dropdown .option {
+  color: var(--text) !important;
+}
+
+.ts-dropdown .option.active,
+.ts-dropdown .option:hover {
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+
+.ts-wrapper.focus .ts-control {
+  box-shadow: 0 0 0 2px var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+.ts-wrapper.single.input-active .ts-control,
+.ts-wrapper .ts-control {
+  cursor: text;
+}
+
+/* ----------------------------- Options row ---------------------------- */
+.options-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-end;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.field input[type="date"] {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  min-width: 170px;
+}
+
+.field input[type="date"]:focus,
+.field input[type="date"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.checkbox input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ----------------------------- Submit button --------------------------- */
+.submit-btn {
+  margin-top: 28px;
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  border-radius: 8px;
+  padding: 15px 20px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.submit-btn:hover { filter: brightness(1.08); }
+.submit-btn:active { transform: scale(0.99); }
+
+.submit-btn:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+
+.submit-btn:disabled {
+  cursor: progress;
+  filter: saturate(0.6) brightness(0.9);
+}
+
+.btn-spinner {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid rgba(36, 26, 4, 0.35);
+  border-top-color: var(--accent-ink);
+  display: none;
+  animation: spin 0.7s linear infinite;
+}
+
+.submit-btn.loading .btn-spinner { display: inline-block; }
+.submit-btn.loading .btn-label::after { content: "…"; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ----------------------------- Results ----------------------------- */
+.results {
+  margin-top: 32px;
+  animation: rise 0.35s ease both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.error-banner {
+  background: var(--surface);
+  border: 1px solid var(--away);
+  border-left: 4px solid var(--away);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
+
+.error-title {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--away);
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.error-detail {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+
+.stat .stat-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--accent);
+  display: block;
+}
+
+.stat .stat-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 4px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 0;
+}
+
+.chart-card figcaption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.chart-card img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  background: var(--surface-2);
+}
+
+/* ----------------------------- Responsive ----------------------------- */
+@media (max-width: 560px) {
+  .teams-row {
+    grid-template-columns: 1fr;
+  }
+  .vs-badge {
+    justify-self: center;
+    margin: -4px 0;
+  }
+  .options-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .stat-strip {
+    grid-template-columns: 1fr;
+  }
+}

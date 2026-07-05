@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture Predictor — WC26Predictor</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="pitch-lines" aria-hidden="true"></div>
+
+<main class="page">
+  <header class="masthead">
+    <p class="eyebrow">World Cup 2026 &middot; Ensemble Model</p>
+    <h1>Predict the Scoreline</h1>
+    <p class="subhead">Dixon-Coles, a Bayesian hierarchical model, and XGBoost, combined into one fixture forecast.</p>
+  </header>
+
+  <form id="predict-form" class="matchcard" novalidate>
+    <div class="teams-row">
+      <div class="team-field">
+        <label for="home-team">Home team</label>
+        <select id="home-team" name="home-team" required></select>
+      </div>
+
+      <div class="vs-badge" aria-hidden="true"><span>VS</span></div>
+
+      <div class="team-field">
+        <label for="away-team">Away team</label>
+        <select id="away-team" name="away-team" required></select>
+      </div>
+    </div>
+
+    <div class="options-row">
+      <div class="field">
+        <label for="match-date">Match date</label>
+        <input type="date" id="match-date" name="match-date" required>
+      </div>
+
+      <div class="checks">
+        <label class="checkbox">
+          <input type="checkbox" id="neutral-venue" name="neutral-venue">
+          <span>Neutral venue</span>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="is-playoff" name="is-playoff">
+          <span>Knockout / playoff match</span>
+        </label>
+      </div>
+    </div>
+
+    <button type="submit" id="submit-btn" class="submit-btn">
+      <span class="btn-label">Predict match</span>
+      <span class="btn-spinner" aria-hidden="true"></span>
+    </button>
+  </form>
+
+  <section id="results" class="results" hidden aria-live="polite">
+
+    <div id="error-banner" class="error-banner" hidden>
+      <p class="error-title">Prediction failed</p>
+      <p id="error-detail" class="error-detail"></p>
+    </div>
+
+    <div id="success-panel" hidden>
+      <div class="stat-strip" id="stat-strip"></div>
+
+      <div class="charts-grid" id="charts-grid">
+        <figure class="chart-card">
+          <figcaption>Scoreline probability</figcaption>
+          <img id="chart-score-heatmap" alt="Scoreline probability heatmap">
+        </figure>
+        <figure class="chart-card">
+          <figcaption>Match outcome</figcaption>
+          <img id="chart-outcome-probabilities" alt="Match outcome probabilities">
+        </figure>
+        <figure class="chart-card">
+          <figcaption>Most likely scorelines</figcaption>
+          <img id="chart-top-scorelines" alt="Top predicted scorelines">
+        </figure>
+        <figure class="chart-card">
+          <figcaption>Backtest accuracy</figcaption>
+          <img id="chart-backtest-metrics-table" alt="Backtest metrics by model">
+        </figure>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
