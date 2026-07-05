@@ -1,7 +1,7 @@
 from pathlib import Path
 import polars as pl
 
-SAVE_DIR: Path = Path.cwd().parent.parent.parent
+SAVE_DIR: Path = Path(__file__).resolve().parents[2]
 
 RESULTS_URL: str = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
 SHOOTOUT_URL: str = "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv"

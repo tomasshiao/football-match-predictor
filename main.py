@@ -697,3 +697,33 @@ def backtest(request: BacktestRequest) -> JSONResponse:
         "ensemble_weights": ensemble_weights,
     }
     return JSONResponse(content=payload)
+
+
+# ---------------------------------------------------------------------------
+# Console-script entry point
+# ---------------------------------------------------------------------------
+
+def serve() -> None:
+    """Launch the API with uvicorn.
+
+    This is what ``[project.scripts]`` in ``pyproject.toml`` points the
+    ``football-predictor`` command at (``main:serve``). It mirrors the
+    Dockerfile's ``CMD`` invocation so the console script and the
+    containerized entrypoint behave identically. Import is local to keep
+    ``uvicorn`` off the import path for anything that only needs ``app``
+    (e.g. ``uvicorn main:app`` itself, or tests that import this module).
+    """
+    import uvicorn
+
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        workers=1,
+        timeout_keep_alive=75,
+        log_level="info",
+    )
+
+
+if __name__ == "__main__":
+    serve()

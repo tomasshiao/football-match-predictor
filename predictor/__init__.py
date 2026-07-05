@@ -111,6 +111,7 @@ from predictor.scoring.matrix import (
     poisson_score_matrix,
     batch_poisson_score_matrices,
     posterior_predictive_score_matrix,
+    bayesian_rate_samples,
 )
 from predictor.scoring.outcomes import (
     OutcomeProbabilities,
@@ -215,6 +216,7 @@ __all__: list[str] = [
     "poisson_score_matrix",
     "batch_poisson_score_matrices",
     "posterior_predictive_score_matrix",
+    "bayesian_rate_samples",
     # scoring.outcomes
     "OutcomeProbabilities",
     "PlayoffOutcomeProbabilities",

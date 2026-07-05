@@ -26,3 +26,4 @@ colorama
 # FastAPI
 fastapi
 pydantic
+uvicorn

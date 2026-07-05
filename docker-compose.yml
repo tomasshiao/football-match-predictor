@@ -1,0 +1,42 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wc26predictor:latest
+    ports:
+      # Override the host port with: API_PORT=9000 docker compose up
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      # Mounted at /app/data and /app/models (NOT container-root /data,
+      # /models — that was only correct while SAVE_DIR had the Path.cwd()
+      # bug). SAVE_DIR now resolves to /app (predictor/constants/constants.py
+      # derives it from Path(__file__), not cwd), so these are the paths the
+      # app actually reads/writes: /app/data/results_cache.csv and
+      # /app/models/*.{joblib,nc}.
+      #
+      # CAVEAT: the Dockerfile chowns /app to the non-root `predictor` user
+      # at build time, but a bind mount replaces that directory's ownership
+      # with whatever the HOST-side ./data and ./models directories are
+      # owned by, ignoring the image's chown for that path. If predictor
+      # can't write into these once mounted, chmod the host directories
+      # (`chmod 777 data models`) or chown them to match the container's
+      # predictor UID/GID (`docker run --rm wc26predictor:latest id predictor`
+      # to find it) — a plain `mkdir -p data models` on the host is not
+      # sufficient by itself the way it was for the old root-path mounts.
+      - ./data:/app/data
+      - ./models:/app/models
+      # PyTensor's compiled-C-extension cache. Only useful once the
+      # Dockerfile's runtime stage has a compiler (g++) installed — without
+      # one PyTensor never populates this directory. Persisting it avoids
+      # paying the JIT-compilation cost again on every container restart.
+      # Named volume (not a bind mount): the Dockerfile chowns this path to
+      # the non-root `predictor` user at build time, and a fresh bind-mounted
+      # host directory would come in root-owned and break that — the same
+      # issue flagged above for ./data and ./models, sidestepped here by not
+      # using a bind mount at all.
+      - pytensor_cache:/app/.pytensor_cache
+    restart: unless-stopped
+
+volumes:
+  pytensor_cache:

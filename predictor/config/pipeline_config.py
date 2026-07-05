@@ -71,22 +71,38 @@ class PathConfig:
     Args:
         root_dir: Root directory for all output files.
         results_cache: Path to the cached results CSV file.
+        fig_dir: Directory to save generated figures.   
         xgb_home_model_prod: Path to save the production XGBoost home model.
         xgb_away_model_prod: Path to save the production XGBoost away model.
         bayes_idata_prod: Path to save the production Bayesian inference data.
     """
     root_dir: pathlib.Path
     results_cache: pathlib.Path
+    fig_dir: pathlib.Path
     xgb_home_model_prod: pathlib.Path
     xgb_away_model_prod: pathlib.Path
     bayes_idata_prod: pathlib.Path
     
     def __post_init__(self) -> None:
+        self.ensure_paths_exist()
         assert self.root_dir.exists(), f"Root directory {self.root_dir} does not exist."
         assert self.results_cache.parent.exists(), f"Directory for results_cache {self.results_cache.parent} does not exist."
+        assert self.fig_dir.exists(), f"Directory for fig_dir {self.fig_dir} does not exist."
         assert self.xgb_home_model_prod.parent.exists(), f"Directory for xgb_home_model_prod {self.xgb_home_model_prod.parent} does not exist."
         assert self.xgb_away_model_prod.parent.exists(), f"Directory for xgb_away_model_prod {self.xgb_away_model_prod.parent} does not exist."
         assert self.bayes_idata_prod.parent.exists(), f"Directory for bayes_idata_prod {self.bayes_idata_prod.parent} does not exist."
+    
+    def ensure_paths_exist(self) -> None:
+        """
+        Ensure that all directories in the path configuration exist.
+        If any directory does not exist, it will be created.
+        """
+        self.root_dir.mkdir(parents=True, exist_ok=True)
+        self.results_cache.parent.mkdir(parents=True, exist_ok=True)
+        self.fig_dir.mkdir(parents=True, exist_ok=True)
+        self.xgb_home_model_prod.parent.mkdir(parents=True, exist_ok=True)
+        self.xgb_away_model_prod.parent.mkdir(parents=True, exist_ok=True)
+        self.bayes_idata_prod.parent.mkdir(parents=True, exist_ok=True)
 
 # --- PipelineConfig --------------------------------
 @dataclass(frozen=True)
@@ -221,6 +237,7 @@ def build_default_pipeline_config(
         paths=PathConfig(
             root_dir=SAVE_DIR,
             results_cache=pathlib.Path(f"{SAVE_DIR}/data/results_cache.csv"),
+            fig_dir=pathlib.Path(f"{SAVE_DIR}/figures/{match_date.isoformat()}/{home_team_fifa_code}vs{away_team_fifa_code}"),
             xgb_home_model_prod=pathlib.Path(f"{SAVE_DIR}/models/xgb_home_model_prod.joblib"),
             xgb_away_model_prod=pathlib.Path(f"{SAVE_DIR}/models/xgb_away_model_prod.joblib"),
             bayes_idata_prod=pathlib.Path(f"{SAVE_DIR}/models/bayes_idata_prod.nc")
