@@ -306,7 +306,7 @@ def _run_backtest_pass(
     train_df, test_df = train_test_split_by_date(core_df, cfg.split.cutoff_date)
 
     all_teams       = select_core_teams(train_df, cfg.team_filter.min_matches)
-    core_match_df   = filter_to_core_teams(core_df, all_teams)
+    core_match_df   = filter_to_core_teams(core_df, all_teams).sort("date")
     train_core_df   = filter_to_core_teams(train_df, all_teams)
     test_core_df    = filter_to_core_teams(test_df, all_teams)
 

@@ -549,7 +549,8 @@ def run_feature_engineering(
     """
     # ── Pre-implementation validation ──────────────────────────────────────
     _validate_feature_inputs(
-        core_match_df, train_weighted_df, dc_ratings_backtest, cfg
+        core_match_df, train_weighted_df, dc_ratings_backtest, cfg,
+        fixture_home_team, fixture_away_team
     )
 
     # ── Compute FORM_DF once; reuse it for both the spot-check and assembly ─
