@@ -11,8 +11,28 @@ def _validate_feature_inputs(
     cfg: PipelineConfig,
     home_team: str,
     away_team: str,
+    enforce_cutoff: bool = True,
 ) -> None:
-    """Pre-implementation guard: verify all feature inputs are leak-free."""
+    """Pre-implementation guard: verify all feature inputs are leak-free.
+
+    Args:
+        core_match_df: Full played-match history, sorted by date, filtered
+            to core teams.
+        train_weighted_df: Weighted training frame. In the backtest pass
+            this is genuinely train-only (pre-cutoff); in the production
+            pass the caller intentionally passes the full-history weighted
+            frame (``prod_weighted_df``) under this same parameter name, so
+            check 4 below does not apply to it — see ``enforce_cutoff``.
+        dc_ratings: Dixon-Coles ratings fit on ``train_weighted_df``.
+        cfg: Pipeline configuration.
+        home_team: Dataset name of the headline fixture home team.
+        away_team: Dataset name of the headline fixture away team.
+        enforce_cutoff: Whether to check that ``train_weighted_df``'s max
+            date is strictly before ``cfg.split.cutoff_date`` (check 4).
+            Set ``True`` for the backtest pass (default) and ``False`` for
+            the production pass, where ``train_weighted_df`` is the full
+            history by design and this check would always fail.
+    """
     print("── Validation Phase ─────────────────────────────────────────────")
 
     # 1. CORE_MATCH_DF must have no null scores (only played matches)
@@ -41,13 +61,18 @@ def _validate_feature_inputs(
     print("  ✓ CORE_MATCH_DF: 'match_id' column present")
 
     # 4. TRAIN_WEIGHTED_DF max date must be strictly < cutoff (backtest safety)
-    _train_max = train_weighted_df["date"].max()
-    assert _train_max < cfg.split.cutoff_date, (
-        f"TRAIN_WEIGHTED_DF max date {_train_max} is not strictly "
-        f"before cutoff {cfg.split.cutoff_date}. "
-        "This would allow test-period information into the backtest reference date."
-    )
-    print(f"  ✓ TRAIN_WEIGHTED_DF max date ({_train_max}) < cutoff ({cfg.split.cutoff_date})")
+    # Backtest-only: the production pass legitimately passes the full-history
+    # weighted frame here (see docstring), so this check is skipped there.
+    if enforce_cutoff:
+        _train_max = train_weighted_df["date"].max()
+        assert _train_max < cfg.split.cutoff_date, (
+            f"TRAIN_WEIGHTED_DF max date {_train_max} is not strictly "
+            f"before cutoff {cfg.split.cutoff_date}. "
+            "This would allow test-period information into the backtest reference date."
+        )
+        print(f"  ✓ TRAIN_WEIGHTED_DF max date ({_train_max}) < cutoff ({cfg.split.cutoff_date})")
+    else:
+        print("  ✓ TRAIN_WEIGHTED_DF cutoff check skipped (production pass: full history)")
 
     # 5. DC_RATINGS_BACKTEST must contain both fixture teams
     for team, role in [
@@ -523,6 +548,7 @@ def run_feature_engineering(
     cfg:                  "PipelineConfig",
     fixture_home_team:    str,
     fixture_away_team:    str,
+    enforce_cutoff:       bool = True,
 ) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
     """Run the full Section 7 feature engineering pipeline.
 
@@ -532,13 +558,23 @@ def run_feature_engineering(
     Args:
         core_match_df:        Full played-match history (train + test),
                               sorted by date, filtered to core teams.
-        train_weighted_df:    Training frame with ``match_weight``.
+        train_weighted_df:    Training frame with ``match_weight``. In the
+                              production pass, callers intentionally pass
+                              the full-history weighted frame here — see
+                              ``enforce_cutoff``.
         dc_ratings_backtest:  Train-only Dixon-Coles ratings.
         cfg:                  Pipeline configuration.
         fixture_home_team:    Dataset name of the headline fixture home team
                               (used in leakage spot-check).
         fixture_away_team:    Dataset name of the headline fixture away team
                               (used in leakage spot-check).
+        enforce_cutoff:       Whether to enforce the backtest-safety check
+                              that ``train_weighted_df``'s max date is
+                              strictly before ``cfg.split.cutoff_date``.
+                              ``True`` (default) for the backtest pass.
+                              Pass ``False`` from the production pass, where
+                              ``train_weighted_df`` is the full history by
+                              design and this check does not apply.
 
     Returns:
         ``(TRAIN_FEATURES, TEST_FEATURES, FORM_DF)``
@@ -550,7 +586,7 @@ def run_feature_engineering(
     # ── Pre-implementation validation ──────────────────────────────────────
     _validate_feature_inputs(
         core_match_df, train_weighted_df, dc_ratings_backtest, cfg,
-        fixture_home_team, fixture_away_team
+        fixture_home_team, fixture_away_team, enforce_cutoff=enforce_cutoff,
     )
 
     # ── Compute FORM_DF once; reuse it for both the spot-check and assembly ─

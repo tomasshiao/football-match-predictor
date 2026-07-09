@@ -60,6 +60,7 @@ from predictor import (
     train_xgboost_goal_models,
     predict_goal_rates,
     run_feature_engineering,
+    add_dixon_coles_features,
     build_fixture_feature_row,
     compute_current_form,
     # Scoring
@@ -334,6 +335,7 @@ def _run_backtest_pass(
         cfg               = cfg,
         fixture_home_team = fixture_home_team,
         fixture_away_team = fixture_away_team,
+        enforce_cutoff    = True,  # backtest pass: train_weighted_df must be pre-cutoff
     )
 
     # ── §8–9  Bayesian (backtest) ──────────────────────────────────────────
@@ -492,6 +494,11 @@ def _run_production_pass(
     # ── §7 prod  Feature engineering ──────────────────────────────────────
     # We need CURRENT_FORM_DF for the fixture row; run_feature_engineering
     # returns form_df as its third element.
+    # enforce_cutoff=False: this pass intentionally refits on the full
+    # history (train_weighted_df here is prod_weighted_df, reference date
+    # = today), so the backtest-only "max date < cutoff" leakage guard in
+    # _validate_feature_inputs does not apply — see run_feature_engineering's
+    # docstring.
     LOGGER.info("Engineering features (production) …")
     _, _, form_df = run_feature_engineering(
         core_match_df       = core_match_df,
@@ -500,6 +507,7 @@ def _run_production_pass(
         cfg                 = cfg,
         fixture_home_team   = fixture_home_team,
         fixture_away_team   = fixture_away_team,
+        enforce_cutoff      = False,
     )
     current_form_df = compute_current_form(core_match_df, cfg.features.rolling_window)
 
@@ -542,9 +550,17 @@ def _run_production_pass(
         LOGGER.warning("Bayesian production convergence check FAILED: %s", conv_report_prod)
 
     # ── §10 prod  XGBoost (full history) ──────────────────────────────────
+    # form_df (returned by run_feature_engineering) only carries the rolling
+    # form columns from add_rolling_form_features — the four DC rating
+    # columns (home_attack_dc, home_defense_dc, away_attack_dc,
+    # away_defense_dc) and is_neutral are added separately inside
+    # run_feature_engineering's internal feature_df, which isn't returned to
+    # the caller. Reproduce that step here so cfg.features.feature_columns
+    # (which includes the DC columns) is fully satisfied.
     LOGGER.info("Training XGBoost models (production) …")
+    prod_feature_df = add_dixon_coles_features(form_df, dc_ratings_prod)
     xgb_home_prod, xgb_away_prod = train_xgboost_goal_models(
-        train_df        = form_df.join(
+        train_df        = prod_feature_df.join(
             prod_weighted_df.select(["match_id", "match_weight"]),
             on="match_id", how="left",
         ).drop_nulls(subset=cfg.features.feature_columns),

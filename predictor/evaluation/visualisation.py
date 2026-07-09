@@ -15,7 +15,7 @@ def plot_score_heatmap(
     matrix: np.ndarray,
     home_team: str,
     away_team: str,
-    max_goals_display: int = 6,
+    max_goals_display: int = 8,
     title_suffix: str = "",
     model_weights: dict[str, float] | None = None,
 ) -> matplotlib.figure.Figure:
