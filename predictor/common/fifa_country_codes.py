@@ -12,7 +12,8 @@ FIFA_TO_DATASET_TEAM: dict[str, str] = {
     "BRU": "Brunei",
     "CAM": "Cambodia",
     "CHN": "China",
-    "TPE": "Chinese Taipei",
+    # NOTE: FIFA uses "Chinese Taipei" for Taiwan, but the dataset uses "Taiwan"
+    # "TPE": "Chinese Taipei",
     "TWN": "Taiwan",
     "GUM": "Guam",
     "HKG": "Hong Kong",

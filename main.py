@@ -727,10 +727,11 @@ def predict(request: PredictRequest) -> JSONResponse:
         )
         charts["top_scorelines"] = _fig_to_base64_png(
             plot_top_n_scorelines(
-                matrix    = prediction.ensemble_matrix,
-                home_team = prediction.home_team,
-                away_team = prediction.away_team,
-                n         = 10,
+                matrix          = prediction.ensemble_matrix,
+                home_team       = prediction.home_team,
+                away_team       = prediction.away_team,
+                n               = 10,
+                pipeline_config = cfg,
             )
         )
         charts["backtest_metrics_table"] = _fig_to_base64_png(

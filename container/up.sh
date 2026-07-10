@@ -6,7 +6,7 @@
 #
 # `container` (as of 1.0.0) has no native docker-compose equivalent, so this
 # script is the direct, single-service translation of docker-compose.yml's
-# `api` service: same image, same port mapping, same three volumes.
+# `api` service: same image, same port mapping, same four volumes.
 #
 # Env overrides (mirrors the ${API_PORT:-8000} pattern already used in
 # docker-compose.yml):
@@ -57,10 +57,11 @@ readonly RUN_AS_ROOT="${RUN_AS_ROOT:-1}"
 
 readonly DATA_DIR="${PROJECT_ROOT}/data"
 readonly MODELS_DIR="${PROJECT_ROOT}/models"
+readonly FIGURES_DIR="${PROJECT_ROOT}/figures"
 
 # Bind-mount sources must exist and be absolute, mirroring what Docker does
-# implicitly for ./data and ./models in docker-compose.yml.
-mkdir -p "${DATA_DIR}" "${MODELS_DIR}"
+# implicitly for ./data, ./models, and ./figures in docker-compose.yml.
+mkdir -p "${DATA_DIR}" "${MODELS_DIR}" "${FIGURES_DIR}"
 
 echo "==> Ensuring the container runtime is running"
 container system start >/dev/null 2>&1 || true
@@ -93,6 +94,7 @@ container run \
     --publish "${PORT}:8000" \
     --volume "${DATA_DIR}:/app/data" \
     --volume "${MODELS_DIR}:/app/models" \
+    --volume "${FIGURES_DIR}:/app/figures" \
     --volume "${VOLUME_NAME}:/app/.pytensor_cache" \
     "${IMAGE_TAG}"
 

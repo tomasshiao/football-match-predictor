@@ -24,8 +24,13 @@ services:
       # predictor UID/GID (`docker run --rm wc26predictor:latest id predictor`
       # to find it) — a plain `mkdir -p data models` on the host is not
       # sufficient by itself the way it was for the old root-path mounts.
+      # Per-request chart PNGs (score heatmap, outcome bars, top-10
+      # scorelines, backtest metrics table), written by /predict under
+      # figures/<match_date>/<home_code>vs<away_code>/. Same bind-mount
+      # ownership caveat as ./data and ./models above applies here too.
       - ./data:/app/data
       - ./models:/app/models
+      - ./figures:/app/figures
       # PyTensor's compiled-C-extension cache. Only useful once the
       # Dockerfile's runtime stage has a compiler (g++) installed — without
       # one PyTensor never populates this directory. Persisting it avoids
