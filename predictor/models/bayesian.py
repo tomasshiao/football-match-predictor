@@ -199,10 +199,13 @@ def fit_bayesian_model(
 ) -> az.InferenceData:
     """Sample the PyMC model using NUTS.
 
-    Runs ``pm.sample`` with the parameters defined in ``config``.  Chains are
-    executed in parallel using ``config.chains`` cores; set
-    ``BayesianConfig.chains = 1`` for strictly sequential execution on
-    memory-constrained hardware.
+    Runs ``pm.sample`` with the parameters defined in ``config``. All
+    ``config.chains`` chains are sampled — full statistical validity,
+    R-hat/ESS computed the same way regardless — but only ``config.cores``
+    of them run simultaneously as separate OS processes, in batches. Lower
+    ``config.cores`` trades wall-clock time for peak memory; see
+    ``BayesianConfig.cores``'s docstring for why running all chains at
+    once by default is a real problem, not just a minor inefficiency.
 
     NUTS (No-U-Turn Sampler) adapts the step size and trajectory length
     automatically, making it well-suited for the high-dimensional hierarchical
@@ -211,7 +214,7 @@ def fit_bayesian_model(
     Args:
         model:  Compiled ``pm.Model`` from ``build_bayesian_model``.
         config: ``BayesianConfig`` supplying ``draws``, ``tune``, ``chains``,
-                ``target_accept``, and ``random_seed``.
+                ``cores``, ``target_accept``, and ``random_seed``.
 
     Returns:
         ``az.InferenceData`` containing posterior samples, sample statistics,
@@ -224,7 +227,7 @@ def fit_bayesian_model(
             draws=config.draws,
             tune=config.tune,
             chains=config.chains,
-            cores=config.chains,       # one core per chain; matches chains count
+            cores=config.cores,
             target_accept=config.target_accept,
             random_seed=config.random_seed,
             progressbar=True,

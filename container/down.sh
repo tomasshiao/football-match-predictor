@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Stop and remove the wc26predictor container started by container/up.sh.
+# Stop and remove the intlmatchpredictor container started by container/up.sh.
 #
 # macOS / Apple Silicon only — see docs/Apple_Container_Setup.md.
 #
@@ -14,7 +14,7 @@
 #
 set -euo pipefail
 
-readonly CONTAINER_NAME="wc26predictor"
+readonly CONTAINER_NAME="intlmatchpredictor"
 readonly VOLUME_NAME="pytensor_cache"
 
 echo "==> Stopping ${CONTAINER_NAME}"

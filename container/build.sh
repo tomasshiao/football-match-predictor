@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build the wc26predictor image with Apple's `container` CLI.
+# Build the intlmatchpredictor image with Apple's `container` CLI.
 #
 # macOS / Apple Silicon only — see docs/Apple_Container_Setup.md.
 # Functionally equivalent to `docker compose build` for the `api` service in
@@ -21,11 +21,11 @@
 #   ./container/build.sh [image_tag]
 #
 # Arguments:
-#   image_tag: Tag to build the image as (default: wc26predictor:latest).
+#   image_tag: Tag to build the image as (default: intlmatchpredictor:latest).
 #
 set -euo pipefail
 
-readonly IMAGE_TAG="${1:-wc26predictor:latest}"
+readonly IMAGE_TAG="${1:-intlmatchpredictor:latest}"
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo "==> Ensuring the container runtime is running"

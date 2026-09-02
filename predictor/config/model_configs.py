@@ -50,6 +50,7 @@ class BayesianConfig:
         rhat_threshold: Maximum acceptable R-hat value for convergence.
             Typically 1.01 (strict) or 1.05 (lenient).
         min_ess: Minimum acceptable effective sample size for convergence.
+        cores: Number of chains to run *simultaneously* as separate OS processes.
     """
 
     draws: int
@@ -63,11 +64,13 @@ class BayesianConfig:
     random_seed: int
     rhat_threshold: float
     min_ess: int
+    cores: int = 2
 
     def __post_init__(self) -> None:
         assert self.draws > 0, "draws must be positive"
         assert self.tune > 0, "tune must be positive"
         assert 4 <= self.chains <= 8, "chains must be in [4, 8]: R-hat is undefined with 1 chain and unreliable with 2; the standard minimum is 4."
+        assert 1 <= self.cores <= self.chains, "cores must be in [1, chains]: 0 spawns no workers, and cores > chains just idles extras."
         assert 0 < self.target_accept < 1, "target_accept must be in (0, 1)"
         assert self.attack_prior_sigma > 0
         assert self.defense_prior_sigma > 0

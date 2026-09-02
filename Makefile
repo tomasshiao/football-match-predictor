@@ -7,7 +7,7 @@
 # See docs/Apple_Container_Setup.md for the macOS install/setup story.
 # ──────────────────────────────────────────────────────────────────────────
 
-IMAGE_TAG := wc26predictor:latest
+IMAGE_TAG := intlmatchpredictor:latest
 
 .PHONY: build up down logs status \
         mac-build mac-up mac-down mac-deploy mac-restart mac-logs mac-status mac-clean
@@ -44,7 +44,7 @@ mac-deploy: mac-build mac-up
 mac-restart: mac-down mac-up
 
 mac-logs:
-	container logs -f wc26predictor
+	container logs -f intlmatchpredictor
 
 mac-status:
 	container list --all

@@ -1,6 +1,61 @@
 import io
 import pathlib
+import time
+import urllib.request
+
 import polars as pl
+
+# Retries + linear backoff for transient failures fetching the source CSVs
+# (DNS blips, brief GitHub raw-content-CDN hiccups, etc.) — see
+# _fetch_url_bytes for the rationale.
+_MAX_FETCH_ATTEMPTS: int = 3
+_FETCH_RETRY_BACKOFF_SECONDS: float = 2.0
+
+
+def _fetch_url_bytes(source_url: str, timeout: int = 60) -> bytes:
+    """Download a URL's raw bytes, retrying on transient network failures.
+
+    Observed in practice: two back-to-back requests to the same hostname
+    (``raw.githubusercontent.com``) from inside a container — one for
+    ``results.csv``, immediately followed by one for ``shootouts.csv`` —
+    where the first succeeds and the second fails with a DNS resolution
+    error (``socket.gaierror``). That pattern indicates a one-off blip
+    (in the container's resolver, the CDN, or the network path) rather
+    than a systemic outage, since a genuinely broken resolver would fail
+    both requests identically. A short retry with linear backoff turns
+    that class of failure into a slower but successful fetch, without
+    masking a truly persistent problem — this still raises after
+    ``_MAX_FETCH_ATTEMPTS`` attempts, same as a single unretried failure
+    would have.
+
+    Args:
+        source_url: URL to fetch.
+        timeout: Per-attempt socket timeout, in seconds.
+
+    Returns:
+        The response body as raw bytes.
+
+    Raises:
+        Exception: Whatever the final attempt raised (e.g.
+            ``urllib.error.URLError``), re-raised as-is so callers can wrap
+            it with their own context.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(1, _MAX_FETCH_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(source_url, timeout=timeout) as resp:
+                return resp.read()
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            if attempt < _MAX_FETCH_ATTEMPTS:
+                wait_s = _FETCH_RETRY_BACKOFF_SECONDS * attempt
+                print(
+                    f"  ↳ Attempt {attempt}/{_MAX_FETCH_ATTEMPTS} failed "
+                    f"({exc}); retrying in {wait_s:.0f}s …"
+                )
+                time.sleep(wait_s)
+    assert last_exc is not None  # the loop always sets this before exiting
+    raise last_exc
 
 def fetch_results_csv(
     source_url: str,
@@ -31,11 +86,9 @@ def fetch_results_csv(
         print(f"  ↳ Loading from cache: {cache_path}")
         raw_bytes = cache_path.read_bytes()
     else:
-        import urllib.request
         print(f"  ↳ Downloading from: {source_url}")
         try:
-            with urllib.request.urlopen(source_url, timeout=60) as resp:
-                raw_bytes = resp.read()
+            raw_bytes = _fetch_url_bytes(source_url)
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"Failed to download results CSV: {exc}") from exc
 
@@ -90,11 +143,9 @@ def fetch_shootout_csv(
         print(f"  ↳ Loading shootout from cache: {_shootout_cache}")
         raw_bytes = _shootout_cache.read_bytes()
     else:
-        import urllib.request
         print(f"  ↳ Downloading shootout from: {source_url}")
         try:
-            with urllib.request.urlopen(source_url, timeout=60) as resp:
-                raw_bytes = resp.read()
+            raw_bytes = _fetch_url_bytes(source_url)
         except Exception as exc:
             raise RuntimeError(f"Failed to download shootout CSV: {exc}") from exc
         if _shootout_cache is not None:

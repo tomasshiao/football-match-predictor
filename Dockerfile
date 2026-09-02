@@ -56,12 +56,20 @@ FROM python:3.12-slim-bookworm AS runtime
 #                  chains on every /predict call. g++ (not the full
 #                  build-essential meta-package) is enough for PyTensor's
 #                  C backend and keeps the added image size small.
+#   gosu         – used by docker-entrypoint.sh to drop from root to the
+#                  unprivileged `predictor` user after fixing bind-mount
+#                  ownership (see that file). Purpose-built for exactly
+#                  this: unlike `su`/`sudo`, it doesn't need a TTY and
+#                  correctly forwards signals to the process it execs, so
+#                  `docker stop` still reaches uvicorn directly instead of
+#                  being swallowed by an intermediary shell.
 # These are *not* dev headers; they are significantly smaller than -dev packages.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libgomp1 \
         libhdf5-103 \
         libnetcdf19 \
         g++ \
+        gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Activate the virtual environment from the builder stage.
@@ -92,15 +100,24 @@ COPY static/ ./static/
 # COPY models/ ./models/
 
 # Non-root user: principle of least privilege.
-# WORKDIR creates /app as root:root, mode 755. The app writes at runtime to
-# several subdirectories under /app — data/, models/, figures/<date>/<match>/,
-# .pytensor_cache/ — some of which don't exist at build time at all now that
-# COPY data/ is commented out above, and figures/ is created fresh per
-# request with a dynamic path. Chown the whole tree rather than trying to
-# enumerate every writable subdirectory individually.
+# WORKDIR creates /app as root:root, mode 755. Pre-create every directory
+# the app writes to at runtime — data/, models/, figures/, .pytensor_cache/,
+# .cache/matplotlib/ — and chown the whole tree in one step. None of these
+# exist yet otherwise: COPY data/ and COPY models/ are commented out above,
+# and figures/ is normally created fresh per request with a dynamic path.
+#
+# This matters beyond just "the directory exists": data/, models/, and
+# figures/ are named Docker volumes in docker-compose.yml (see that file's
+# comments for why they're not bind mounts). Docker seeds a fresh named
+# volume's ownership from whatever's already at that path in the image —
+# with nothing here to seed from, a new volume defaults to root:root and
+# `predictor` can't write to it, which is what previously produced
+# "PermissionError: [Errno 13] ... '/app/data/results_cache.csv'". Same
+# story for .pytensor_cache (also a named volume) and .cache/matplotlib
+# (not a volume at all, just needs to exist before predictor's first write).
 RUN addgroup --system predictor && adduser --system --ingroup predictor predictor \
+    && mkdir -p /app/data /app/models /app/figures /app/.cache/matplotlib /app/.pytensor_cache \
     && chown -R predictor:predictor /app
-USER predictor
 
 # ── Runtime configuration ─────────────────────────────────────────────────────
 # PyMC / PyTensor compilation cache: kept inside /app (rather than the
@@ -136,7 +153,8 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"
 
-# ── Entrypoint ────────────────────────────────────────────────────────────────
+# ── Startup command ───────────────────────────────────────────────────────────
+# This is what docker-entrypoint.sh receives as "$@" and execs via gosu.
 # --workers 1: the Bayesian NUTS sampler is already multi-threaded internally;
 #   multiple workers would compete for CPU cores and shared model state.
 # --timeout-keep-alive 75: slightly above the 60 s NUTS startup period.

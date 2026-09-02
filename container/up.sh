@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Start the wc26predictor container with Apple's `container` CLI.
+# Start the intlmatchpredictor container with Apple's `container` CLI.
 #
 # macOS / Apple Silicon only — see docs/Apple_Container_Setup.md.
 #
@@ -19,7 +19,7 @@
 # details):
 #   * `container run` has no --restart policy flag (no CLI equivalent exists
 #     as of container 1.0). The container simply stays stopped if it exits;
-#     `container start wc26predictor` brings it back.
+#     `container start intlmatchpredictor` brings it back.
 #   * The Dockerfile's HEALTHCHECK instruction is Docker-specific image
 #     metadata; `container` doesn't evaluate it. Use `make mac-status` (or
 #     curl the /docs endpoint) to check liveness instead.
@@ -36,17 +36,23 @@
 #     ./data or ./models folders from Terminal does not help: the ownership
 #     you'd set there isn't what the guest VM sees. Set RUN_AS_ROOT=0 to try
 #     non-root again once that upstream issue is resolved.
+#     RUN_AS_ROOT is passed both as --user (so the entrypoint itself starts
+#     as root, able to chown) and as a container env var (so
+#     docker-entrypoint.sh — shared with the Linux/docker-compose image —
+#     knows to skip its own gosu privilege-drop and stay root all the way
+#     through, instead of chowning as root and then handing off to a
+#     `predictor` user that would hit the exact same root-owned-mount wall).
 #
 # Usage:
 #   ./container/up.sh [image_tag]
 #
 # Arguments:
-#   image_tag: Image to run (default: wc26predictor:latest).
+#   image_tag: Image to run (default: intlmatchpredictor:latest).
 #
 set -euo pipefail
 
-readonly IMAGE_TAG="${1:-wc26predictor:latest}"
-readonly CONTAINER_NAME="wc26predictor"
+readonly IMAGE_TAG="${1:-intlmatchpredictor:latest}"
+readonly CONTAINER_NAME="intlmatchpredictor"
 readonly VOLUME_NAME="pytensor_cache"
 readonly PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -91,6 +97,7 @@ container run \
     --cpus "${CPUS}" \
     --memory "${MEMORY}" \
     ${USER_FLAGS[@]+"${USER_FLAGS[@]}"} \
+    --env "RUN_AS_ROOT=${RUN_AS_ROOT}" \
     --publish "${PORT}:8000" \
     --volume "${DATA_DIR}:/app/data" \
     --volume "${MODELS_DIR}:/app/models" \

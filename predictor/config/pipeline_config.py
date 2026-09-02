@@ -1,9 +1,51 @@
 import datetime
 from dataclasses import dataclass
+import os
 import pathlib
 from ..constants.constants import REQUIRED_FEATURE_COLUMNS, REQUIRED_METRICS, BAYESIAN_SEED, OPTUNA_SEED, RESULTS_URL, SAVE_DIR, SHOOTOUT_URL
 from .data_config import DataConfig, TeamFilterConfig, WeightingConfig, SplitConfig, get_tournament_weight_table
 from .model_configs import DixonColesConfig, BayesianConfig, FeatureConfig, OptunaConfig, XGBoostConfig, EnsembleConfig
+
+
+def _default_bayesian_cores(chains: int, memory_safe_cap: int = 2) -> int:
+    """Pick a ``pm.sample()`` ``cores`` value for the current machine.
+
+    Takes the smallest of three *independent* constraints:
+
+    - ``chains``: no benefit running more worker processes than there are
+      chains to sample.
+    - The host's visible CPU count: oversubscribing CPUs doesn't sample
+      faster, it just adds context-switching overhead for no benefit.
+    - ``memory_safe_cap``: an explicit ceiling addressing the actual cause
+      of the OOM kill this was built to prevent (see
+      ``BayesianConfig.cores``'s docstring) — each concurrent chain holds
+      its own compiled PyTensor graph plus ``draws + tune`` samples in
+      memory, and CPU count says nothing about available RAM. A machine
+      can easily have 8 cores and 4 GB of RAM; auto-detecting CPU count
+      alone would have reproduced the original bug on exactly that kind
+      of host.
+    
+    Args:
+        chains: Total number of MCMC chains that will be run.
+        memory_safe_cap: Hard ceiling independent of CPU count. Raise this
+            explicitly once you've confirmed your target host handles it;
+            lower it (down to 1, fully sequential) if OOM kills persist.
+
+    Returns:
+        A ``cores`` value in ``[1, chains]``.
+    """
+    configured_cores = os.getenv("BAYESIAN_CORES")
+    if configured_cores is not None:
+        try:
+            return max(1, min(int(configured_cores), chains))
+        except ValueError:
+            pass
+
+    try:
+        available_cpus = len(os.sched_getaffinity(0))  # Linux: cpuset-aware
+    except AttributeError:  # sched_getaffinity doesn't exist on macOS/Windows
+        available_cpus = os.cpu_count() or 1
+    return max(1, min(available_cpus, chains, memory_safe_cap))
 
 # --- FixtureConfig --------------------------------
 @dataclass(frozen=True)
@@ -185,6 +227,13 @@ def build_default_pipeline_config(
             draws=1000,
             tune=1000,
             chains=8,
+            # min(visible CPUs, chains, memory_safe_cap) — see
+            # _default_bayesian_cores's docstring. The memory_safe_cap=2
+            # default is the one actually preventing another OOM kill; CPU
+            # detection alone wouldn't have caught it. Pass an explicit
+            # memory_safe_cap= here instead if 2 is too conservative (more
+            # RAM available) or still too high (OOM persists at 2).
+            cores=_default_bayesian_cores(chains=8),
             target_accept=0.9,
             attack_prior_sigma=0.5,
             defense_prior_sigma=0.5,
@@ -211,6 +260,7 @@ def build_default_pipeline_config(
                 "random_state": OPTUNA_SEED,
                 "tree_method": "hist",
                 "eval_metric": "poisson-nloglik",
+                "n_jobs": 1,
             },
             search_space={
                 "n_estimators": (100, 600),
